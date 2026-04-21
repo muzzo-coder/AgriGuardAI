@@ -104,17 +104,6 @@ npm run dev
 
 ---
 
-## 📸 Screenshots
-
-| Dashboard (Light Mode) | Diagnosis View |
-| :---: | :---: |
-| ![Placeholder](https://placehold.co/600x400?text=Dashboard+UI) | ![Placeholder](https://placehold.co/600x400?text=Diagnosis+Result) |
-
-| AI Chatbot | Settings & Language |
-| :---: | :---: |
-| ![Placeholder](https://placehold.co/600x400?text=AI+Chatbot) | ![Placeholder](https://placehold.co/600x400?text=Settings+View) |
-
----
 
 ## 🔗 API Endpoints
 
@@ -144,6 +133,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 **Muzzo-Coder**  
 GitHub: [@muzzo-coder](https://github.com/muzzo-coder)  
+LinkedIn: [Mujjamil Sofi](https://www.linkedin.com/in/mujjamil-sofi/)  
 Project Link: [https://github.com/muzzo-coder/AgriGuardAI](https://github.com/muzzo-coder/AgriGuardAI)
 
 ---
