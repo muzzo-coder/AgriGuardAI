@@ -1,4 +1,4 @@
-# AgriGuard AI - Funded Startup-Level Plant Health SaaS
+# AgriGuard AI
 
 AgriGuard AI is a high-performance, industry-level Clinical Decision Support System for plant disease detection. It combines a deep learning backend with a modern, healthcare-inspired React dashboard to provide expert-level agricultural insights.
 
