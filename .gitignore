@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv/
+venv/
+ENV/
+bin/
+lib/
+include/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Node/React (Frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr
+frontend/*.local
+frontend/.env
+
+# IDEs and OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Large files (Optional, but safe for GitHub at these sizes)
+# Dataset/
+# *.h5
+# *.json
