@@ -1,0 +1,136 @@
+[
+  {
+    "disease": "Bacteria Spot",
+    "symptoms": "Small, water-soaked spots on leaves which later turn brown and necrotic. Spots may have a yellow halo. Infected fruit show small, raised, black spots.",
+    "causes": "Caused by Xanthomonas bacteria. Spread by splashing rain, overhead irrigation, and contaminated tools. Thrives in warm, humid conditions.",
+    "treatment": "Apply copper-based fungicides. Use organic bactericides like Serenade (Bacillus subtilis). Remove and destroy infected plant debris.",
+    "prevention": "Rotate crops every 2-3 years. Use disease-free seeds and transplants. Avoid overhead irrigation. Maintain good airflow between plants.",
+    "additional_tips": "Mulching helps prevent bacteria from splashing from the soil onto the leaves."
+  },
+  {
+    "disease": "Early Blight",
+    "symptoms": "Target-like spots with concentric rings on older leaves. Lower leaves usually affected first. Yellowing of leaves around the spots.",
+    "causes": "Caused by the fungus Alternaria solani. Survives in soil and plant debris. Favored by warm temperatures and high humidity or frequent rainfall.",
+    "treatment": "Apply fungicides like Chlorothalonil or copper-based sprays. Use organic options like Neem oil or potassium bicarbonate. Prune lower leaves to improve airflow.",
+    "prevention": "Keep foliage dry. Space plants properly. Mulch around the base. Practice crop rotation and remove garden debris after harvest.",
+    "additional_tips": "Stake plants to keep them off the ground and improve air circulation."
+  },
+  {
+    "disease": "Late Blight",
+    "symptoms": "Large, irregular, water-soaked patches on leaves that quickly turn brown and papery. White fuzzy growth on the underside of leaves in humid weather. Dark brown lesions on stems.",
+    "causes": "Caused by the oomycete Phytophthora infestans. Can destroy entire crops rapidly. Spread by wind-borne spores.",
+    "treatment": "Immediate application of specialized fungicides. For organic gardens, use copper sprays early. Remove and destroy infected plants immediately—do not compost them.",
+    "prevention": "Plant resistant varieties. Avoid planting near potatoes (which share the disease). Ensure good drainage. Monitor weather for 'late blight weather' (cool and wet).",
+    "additional_tips": "Early detection is critical. Once established, late blight is very difficult to control."
+  },
+  {
+    "disease": "Leaf Mold",
+    "symptoms": "Pale green or yellowish spots on the upper surface of older leaves. Olive-green to brown velvety growth on the leaf underside. Leaves eventually turn brown and wither.",
+    "causes": "Caused by the fungus Passalora fulva. Primarily occurs in greenhouses with high humidity (above 85%) and poor ventilation.",
+    "treatment": "Improve greenhouse ventilation. Use fungicides if infestation is severe. Organic treatments include copper-based sprays.",
+    "prevention": "Reduce humidity. Prune for better airflow. Use resistant cultivars. Keep greenhouse temperatures above 60°F (15°C) at night.",
+    "additional_tips": "Avoid late-day watering which leaves foliage wet overnight."
+  },
+  {
+    "disease": "Septoria Leaf Spot",
+    "symptoms": "Small, circular spots with gray centers and dark borders. Tiny black specks (fruiting bodies) in the center of spots. Usually starts on lower leaves.",
+    "causes": "Caused by the fungus Septoria lycopersici. Spreads by splashing water and contaminated tools. Can survive on weeds and crop debris.",
+    "treatment": "Apply fungicides containing copper or chlorothalonil. Remove affected leaves to slow the spread. Use organic biofungicides.",
+    "prevention": "Avoid overhead watering. Rotate crops. Keep the garden free of weeds. Use mulch to prevent soil splashing.",
+    "additional_tips": "Do not work in the garden when the plants are wet to avoid spreading spores."
+  },
+  {
+    "disease": "Target Spot",
+    "symptoms": "Circular brown spots with concentric rings, giving a 'target' appearance. Spots are larger than those of Early Blight and may have a yellow halo.",
+    "causes": "Caused by the fungus Corynespora cassiicola. Favored by high humidity and temperatures between 70-85°F (21-30°C).",
+    "treatment": "Spray with fungicides such as azoxystrobin or chlorothalonil. Organic control includes Neem oil or Bacillus amyloliquefaciens.",
+    "prevention": "Improve airflow. Avoid excessively long periods of leaf wetness. Manage weeds that may host the fungus.",
+    "additional_tips": "Adequate spacing between plants is essential for reducing humidity in the canopy."
+  },
+  {
+    "disease": "Tomato Yellow Leaf Curl Virus",
+    "symptoms": "Severe stunting of plants. Leaves curl upward and turn yellow at the margins. Flower drop is common, resulting in little to no fruit production.",
+    "causes": "Transmitted by silverleaf whiteflies (Bemisia tabaci). The virus is not spread by seeds or mechanical means.",
+    "treatment": "No cure for existing virus. Remove and destroy infected plants immediately. Focus on controlling whitefly populations using yellow sticky traps or insecticidal soaps.",
+    "prevention": "Use insect-proof netting. Plant resistant varieties. Control weeds in and around the garden. Use reflective mulches to deter whiteflies.",
+    "additional_tips": "Clean the area of all host plants during the off-season to break the virus cycle."
+  },
+  {
+    "disease": "Tomato Mosaic Virus",
+    "symptoms": "Mottling and discoloration of leaves (mosaic pattern). Leaves may be malformed or 'fern-like'. Fruit may show internal browning.",
+    "causes": "Highly contagious virus spread by contact (hands, tools) and some insects. Can survive on tobacco products and seeds.",
+    "treatment": "No cure. Remove and destroy infected plants immediately. Do not touch healthy plants after handling infected ones.",
+    "prevention": "Sanitize tools with a bleach solution. Avoid using tobacco products near plants. Wash hands thoroughly. Plant certified virus-free seeds.",
+    "additional_tips": "Milk sprays (diluted) have been used by some gardeners to help deactivate the virus on surfaces, though effectiveness varies."
+  },
+  {
+    "disease": "Two Spotted Spider Mite",
+    "symptoms": "Tiny pale yellow stippling on leaves. Fine silken webbing on the undersides of leaves or between stems. Leaves may turn bronze and drop.",
+    "causes": "Tetranychus urticae, tiny arachnids. Thrive in hot, dry conditions. Can multiply rapidly.",
+    "treatment": "Blast mites off with a strong stream of water. Use insecticidal soap, Neem oil, or horticultural oils. Introduce predatory mites like Phytoseiulus persimilis.",
+    "prevention": "Keep plants well-hydrated. Mist leaves in hot, dry weather. Avoid dusty conditions which favor mites. Avoid broad-spectrum insecticides that kill natural predators.",
+    "additional_tips": "Check the undersides of leaves regularly, especially during dry spells."
+  },
+  {
+    "disease": "Healthy Plant Care",
+    "symptoms": "Lush green leaves, strong stems, and steady growth. No visible spots, wilting, or pests.",
+    "causes": "Balanced nutrients, proper watering, and good environmental conditions.",
+    "treatment": "Continue regular maintenance. Provide balanced organic fertilizer (e.g., compost tea).",
+    "prevention": "Monitor daily for early signs of trouble. Maintain soil health with organic matter. Use clean water.",
+    "additional_tips": "Healthy plants are the best defense against diseases and pests."
+  },
+  {
+    "topic": "Soil Preparation",
+    "disease": "Soil Health & Preparation",
+    "symptoms": "N/A",
+    "causes": "Poor soil quality leads to weak plants that are more susceptible to disease.",
+    "treatment": "Amend soil with organic compost, well-rotted manure, or green manure. Ensure proper pH (usually 6.0-7.0 for tomatoes).",
+    "prevention": "Test soil every 2-3 years. Use mulch to maintain moisture and suppress weeds.",
+    "additional_tips": "Good soil structure (loamy) allows for better drainage and root penetration."
+  },
+  {
+    "topic": "Watering Best Practices",
+    "disease": "Irrigation Management",
+    "symptoms": "Wilting, leaf curl, or blossom end rot due to inconsistent moisture.",
+    "causes": "Overwatering or underwatering; watering foliage instead of soil.",
+    "treatment": "Water at the base of the plant early in the morning. Use drip irrigation or soaker hoses.",
+    "prevention": "Maintain consistent moisture levels. Avoid overhead watering to prevent fungal spread.",
+    "additional_tips": "Deep watering once or twice a week is better than light daily watering."
+  },
+  {
+    "topic": "Organic Pest Control",
+    "disease": "General Pest Management",
+    "symptoms": "Holes in leaves, sticky residue (honeydew), or visible insects.",
+    "causes": "Aphids, whiteflies, beetles, and other common garden pests.",
+    "treatment": "Use Neem oil, insecticidal soap, or hot pepper sprays. Introduce beneficial insects like ladybugs.",
+    "prevention": "Encourage biodiversity. Use companion planting to deter pests. Remove heavily infested plants.",
+    "additional_tips": "Interplant with marigolds or basil to naturally repel many common pests."
+  },
+  {
+    "topic": "Companion Planting",
+    "disease": "N/A",
+    "symptoms": "N/A",
+    "causes": "Lack of biodiversity can lead to increased pest pressure.",
+    "treatment": "Plant Marigolds with tomatoes to deter nematodes. Basil improves tomato flavor and repels flies and mosquitoes.",
+    "prevention": "Plan your garden layout to include beneficial neighbors. Avoid planting fennel near most other plants.",
+    "additional_tips": "Carrots, onions, and leeks are great companions that help deter each other's pests."
+  },
+  {
+    "topic": "Nutrient Deficiencies",
+    "disease": "Nitrogen, Phosphorus, Potassium Deficiency",
+    "symptoms": "Yellowing of lower leaves (Nitrogen), purple tint on leaf undersides (Phosphorus), or brown scorched edges (Potassium).",
+    "causes": "Leached soil or improper pH preventing nutrient uptake.",
+    "treatment": "Apply balanced organic fertilizer. Use fish emulsion for Nitrogen, bone meal for Phosphorus, and kelp meal for Potassium.",
+    "prevention": "Test soil annually. Maintain organic matter with compost.",
+    "additional_tips": "Over-fertilizing can be as harmful as under-fertilizing, often leading to lush but weak growth susceptible to pests."
+  },
+  {
+    "topic": "Pruning and Maintenance",
+    "disease": "Airflow and Canopy Management",
+    "symptoms": "Dense foliage trapping humidity, leading to fungal issues like Leaf Mold or Powdery Mildew.",
+    "causes": "Overcrowding and lack of pruning.",
+    "treatment": "Prune 'suckers' from tomato plants. Remove bottom leaves that touch the soil.",
+    "prevention": "Space plants according to variety recommendations. Stake or cage plants early.",
+    "additional_tips": "Always use clean, sharp shears for pruning to avoid wounding the plant unnecessarily."
+  }
+]

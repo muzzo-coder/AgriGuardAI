@@ -1,106 +1,166 @@
 import React from 'react';
 import Hero from '../components/Hero';
 import { motion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Search, MessageSquare, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Search, MessageSquare, ShieldCheck, ArrowRight, Zap, Target, Heart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const Home: React.FC = () => {
   const { t } = useTranslation();
 
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: [0.16, 1, 0.3, 1]
+      }
+    }
+  };
+
   return (
-    <div className="fade-in">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      exit={{ opacity: 0, scale: 1.02 }}
+      variants={containerVariants}
+      className="pb-20"
+    >
       <Hero />
       
-      <section className="page-container -mt-10">
+      <section className="page-container -mt-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Feature Card: Detect */}
           <motion.div 
-            whileHover={{ y: -5 }}
-            className="card-clean p-8 flex flex-col items-start gap-4"
+            variants={itemVariants}
+            whileHover={{ y: -8 }}
+            className="card-clean p-10 flex flex-col items-start gap-6 card-hover"
           >
-            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600">
-              <Search size={24} />
+            <div className="w-14 h-14 bg-teal-50 dark:bg-teal-900/20 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <Search size={28} />
             </div>
-            <h3 className="text-xl font-bold font-heading">{t('nav_detect_title', { defaultValue: 'Disease Detection' })}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              {t('home_detect_desc', { defaultValue: 'Use our advanced neural network to identify pathologies in seconds.' })}
-            </p>
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold font-heading">{t('nav_detect_title', { defaultValue: 'Disease Detection' })}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                {t('home_detect_desc', { defaultValue: 'Advanced neural analysis to identify crop pathologies with clinical precision.' })}
+              </p>
+            </div>
             <Link 
               to="/detect" 
-              className="mt-4 flex items-center gap-2 text-emerald-600 font-bold text-sm hover:gap-3 transition-all"
+              className="mt-4 flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold text-sm hover:gap-3 transition-all group"
             >
-              Analyze Leaf <ArrowRight size={16} />
+              {t('home_begin_diagnostic', { defaultValue: 'Begin Diagnostic' })} <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
 
           {/* Feature Card: AI Chat */}
           <motion.div 
-            whileHover={{ y: -5 }}
-            className="card-clean p-8 flex flex-col items-start gap-4"
+            variants={itemVariants}
+            whileHover={{ y: -8 }}
+            className="card-clean p-10 flex flex-col items-start gap-6 card-hover"
           >
-            <div className="w-12 h-12 bg-sky-100 dark:bg-sky-900/30 rounded-xl flex items-center justify-center text-sky-600">
-              <MessageSquare size={24} />
+            <div className="w-14 h-14 bg-teal-50 dark:bg-teal-900/20 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <MessageSquare size={28} />
             </div>
-            <h3 className="text-xl font-bold font-heading">{t('nav_chatbot', { defaultValue: 'AI Assistant' })}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              {t('home_chat_desc', { defaultValue: 'Get personalized organic treatment protocols from our AI expert.' })}
-            </p>
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold font-heading">{t('nav_chatbot', { defaultValue: 'AI Assistant' })}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                {t('home_chat_desc', { defaultValue: 'Personalized organic treatment protocols and preventive strategies.' })}
+              </p>
+            </div>
             <Link 
               to="/chatbot" 
-              className="mt-4 flex items-center gap-2 text-sky-600 font-bold text-sm hover:gap-3 transition-all"
+              className="mt-4 flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold text-sm hover:gap-3 transition-all group"
             >
-              Consult Assistant <ArrowRight size={16} />
+              {t('home_consult_expert', { defaultValue: 'Consult Expert' })} <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
 
           {/* Feature Card: Safety/About */}
           <motion.div 
-            whileHover={{ y: -5 }}
-            className="card-clean p-8 flex flex-col items-start gap-4"
+            variants={itemVariants}
+            whileHover={{ y: -8 }}
+            className="card-clean p-10 flex flex-col items-start gap-6 card-hover"
           >
-            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600">
-              <ShieldCheck size={24} />
+            <div className="w-14 h-14 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <ShieldCheck size={28} />
             </div>
-            <h3 className="text-xl font-bold font-heading">{t('nav_about', { defaultValue: 'About Project' })}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              {t('home_about_desc', { defaultValue: 'Built at the intersection of Agriculture and Technology for sustainable farming.' })}
-            </p>
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold font-heading">{t('nav_about', { defaultValue: 'About Project' })}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                {t('home_about_desc', { defaultValue: 'Bridging the gap between AI and sustainable agricultural practices.' })}
+              </p>
+            </div>
             <Link 
               to="/about" 
-              className="mt-4 flex items-center gap-2 text-amber-600 font-bold text-sm hover:gap-3 transition-all"
+              className="mt-4 flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-sm hover:gap-3 transition-all group"
             >
-              Learn More <ArrowRight size={16} />
+              {t('home_mission_link', { defaultValue: 'Our Mission' })} <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
         </div>
 
-        {/* Informational Section */}
-        <div className="mt-24 card-clean p-10 md:p-16 flex flex-col md:flex-row items-center gap-12 bg-emerald-700 dark:bg-emerald-900 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
-          <div className="flex-1 space-y-6 relative z-10">
-            <h2 className="text-3xl md:text-5xl font-extrabold font-heading leading-tight">
-              Sustainable Protection <br /> for Your Harvest.
-            </h2>
-            <p className="text-emerald-50 max-w-lg leading-relaxed opacity-90">
-              AgriGuard isn't just a detector; it's a dedicated companion for modern farmers. 
-              We prioritize organic treatments to help you grow healthy, chemical-free crops.
-            </p>
-            <Link 
-              to="/detect" 
-              className="inline-block px-8 py-3 bg-white text-emerald-800 font-bold rounded-xl hover:bg-emerald-50 transition-colors shadow-xl shadow-emerald-950/20"
-            >
-              Start Free Diagnosis
-            </Link>
+        {/* Stats / Proof Section */}
+        <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+          <div className="space-y-4">
+            <Zap className="mx-auto text-teal-600" size={32} />
+            <h4 className="text-3xl font-black font-heading">2.4s</h4>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{t('stats_speed', { defaultValue: 'Diagnosis Speed' })}</p>
           </div>
-          <div className="flex-1 flex justify-center w-full md:w-auto">
-            <div className="w-64 h-64 bg-emerald-600/50 rounded-3xl rotate-12 flex items-center justify-center border border-white/10 shadow-2xl">
-              <ShieldCheck className="w-32 h-32 text-white/20 -rotate-12" />
+          <div className="space-y-4">
+            <Target className="mx-auto text-teal-600" size={32} />
+            <h4 className="text-3xl font-black font-heading">98.2%</h4>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{t('stats_accuracy', { defaultValue: 'Prediction Accuracy' })}</p>
+          </div>
+          <div className="space-y-4">
+            <Heart className="mx-auto text-teal-600" size={32} />
+            <h4 className="text-3xl font-black font-heading">100%</h4>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{t('stats_organic', { defaultValue: 'Organic Recommended' })}</p>
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="mt-32 p-12 md:p-20 rounded-[3rem] bg-teal-900 dark:bg-[#0F172A] text-white relative overflow-hidden shadow-2xl shadow-teal-900/20">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[100px] -mr-64 -mt-64" />
+          <div className="max-w-3xl relative z-10 space-y-8">
+            <h2 className="text-4xl md:text-6xl font-black font-heading leading-[1.1]">
+              {t('home_cta_title')}<br />
+              {t('home_cta_subtitle')}
+            </h2>
+            <p className="text-lg text-teal-100/80 leading-relaxed max-w-xl">
+              {t('home_cta_desc')}
+            </p>
+            <div className="flex flex-wrap gap-4 pt-4">
+              <Link 
+                to="/detect" 
+                className="px-10 py-4 bg-teal-500 hover:bg-teal-400 text-white font-black rounded-2xl transition-all shadow-lg shadow-teal-950/40 active:scale-95"
+              >
+                {t('home_scan_now')}
+              </Link>
+              <Link 
+                to="/about" 
+                className="px-10 py-4 bg-white/10 hover:bg-white/20 text-white font-black rounded-2xl transition-all backdrop-blur-md active:scale-95"
+              >
+                {t('home_read_docs')}
+              </Link>
             </div>
           </div>
         </div>
       </section>
-    </div>
+    </motion.div>
   );
 };
 

@@ -2,8 +2,10 @@ import React from 'react';
 import Uploader from '../components/Uploader';
 import ResultDisplay from '../components/ResultDisplay';
 import HistoryPanel from '../components/HistoryPanel';
-import WeatherWidget from '../components/WeatherWidget';
+import FieldIntelligence from '../components/FieldIntelligence';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DetectPageProps {
   predictionData: any;
@@ -22,39 +24,78 @@ const DetectPage: React.FC<DetectPageProps> = ({
   onSelectHistory, 
   onClearHistory 
 }) => {
+  const { t } = useTranslation();
+
   return (
-    <div className="page-container fade-in">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+    <motion.div 
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      transition={{ duration: 0.5, ease: "circOut" }}
+      className="page-container"
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Main Diagnostic Area */}
-        <div className="lg:col-span-3 space-y-12">
-          {!predictionData ? (
-             <div className="py-12">
-               <div className="text-center mb-12 space-y-4">
-                 <h2 className="text-3xl font-extrabold font-heading text-slate-900 dark:text-white">Disease Detection</h2>
-                 <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-                   Upload a clear photo of the infected leaf or use your camera for real-time analysis.
-                 </p>
-               </div>
-               <Uploader onResult={onResult} onReset={onReset} />
-             </div>
-          ) : (
-            <div id="diagnostic-results" className="scroll-mt-24 space-y-12">
-              <div className="flex justify-start">
-                <button 
-                  onClick={onReset}
-                  className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
-                >
-                  ← New Analysis
-                </button>
-              </div>
-              <ResultDisplay result={predictionData} />
-            </div>
-          )}
+        <div className="lg:col-span-8 xl:col-span-9 space-y-12">
+          <AnimatePresence mode="wait">
+            {!predictionData ? (
+              <motion.div 
+                key="uploader"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.02 }}
+                transition={{ duration: 0.4 }}
+                className="py-6"
+              >
+                <div className="text-center mb-16 space-y-6">
+                  <div className="inline-block px-4 py-1.5 bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800 rounded-full mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">
+                      {t('detect_badge', { defaultValue: 'Laboratory Standards' })}
+                    </span>
+                  </div>
+                  <h1 className="text-4xl md:text-6xl font-black font-heading text-gray-900 dark:text-white leading-[1.1]">{t('detect_title', { defaultValue: 'Intelligent RAG-Powered Diagnosis' })}</h1>
+                  <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
+                    {t('detect_subtitle', { defaultValue: 'Our RAG-enhanced neural engine analyzes both visual specimens and symptom descriptions for clinical-grade precision.' })}
+                  </p>
+                </div>
+                
+                <div className="max-w-3xl mx-auto">
+                    <Uploader onResult={onResult} onReset={onReset} />
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="results"
+                id="diagnostic-results" 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -30 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="scroll-mt-24 space-y-12"
+              >
+                <div className="flex justify-start">
+                  <button 
+                    onClick={onReset}
+                    className="group flex items-center gap-2 px-7 py-3 bg-white dark:bg-gray-900 text-teal-600 dark:text-teal-400 rounded-2xl font-bold text-xs uppercase tracking-widest border border-teal-100 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-all shadow-sm"
+                  >
+                    <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                    {t('detect_new_specimen', { defaultValue: 'New Specimen' })}
+                  </button>
+                </div>
+                <ResultDisplay result={predictionData} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         
         {/* Sidebar */}
-        <div className="space-y-8">
-          <WeatherWidget />
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="lg:col-span-4 xl:col-span-3 space-y-10"
+        >
+          <FieldIntelligence prediction={predictionData} />
           <div className="sticky top-24">
             <HistoryPanel 
               items={history} 
@@ -62,9 +103,9 @@ const DetectPage: React.FC<DetectPageProps> = ({
               onClear={onClearHistory} 
             />
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

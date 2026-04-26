@@ -1,35 +1,134 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Header from './components/Header';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { Leaf } from 'lucide-react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import DetectPage from './pages/DetectPage';
-import ChatbotPage from './pages/ChatbotPage';
 import AboutPage from './pages/AboutPage';
 import SettingsPage from './pages/SettingsPage';
+import { getSafeItem, setSafeItem, clearSafeItems } from './utils/storage';
 
 /**
- * Main Application Orchestrator with Multi-Page Routing
+ * Global Error Boundary for the React tree
  */
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Layout/Render Error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0B1120] flex items-center justify-center p-6 text-center">
+          <div className="max-w-md space-y-10">
+             <div className="w-20 h-20 bg-amber-500/10 rounded-[2rem] flex items-center justify-center mx-auto border border-amber-500/20">
+                <Leaf className="text-amber-500 w-10 h-10" />
+             </div>
+             <div className="space-y-4">
+                <h1 className="text-3xl font-black text-white font-heading">System Integrity Check</h1>
+                <p className="text-gray-400 leading-relaxed text-sm">
+                   The application encountered a critical runtime exception. This often results from corrupted local storage or an incompatible browser state.
+                </p>
+             </div>
+             <div className="flex flex-col gap-4">
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full py-4 bg-teal-500 hover:bg-teal-400 text-white font-black rounded-2xl transition-all shadow-lg shadow-teal-500/20 text-xs uppercase tracking-widest"
+                >
+                  Reload Neural Interface
+                </button>
+                <button 
+                  onClick={() => { clearSafeItems(['agri-theme', 'agri-history', 'i18nextLng']); window.location.reload(); }}
+                  className="w-full py-4 bg-gray-800 hover:bg-gray-700 text-gray-400 font-black rounded-2xl transition-all text-xs uppercase tracking-widest"
+                >
+                  Reset All Local Data
+                </button>
+             </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Creative Animated Routes Wrapper
+ */
+const AnimatedRoutes: React.FC<any> = ({ 
+  predictionData, 
+  history, 
+  onResult, 
+  onReset, 
+  onSelectHistory, 
+  onClearHistory,
+  darkMode,
+  onToggleTheme
+}) => {
+  const location = useLocation();
+
+  return (
+    <ErrorBoundary>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route element={<Layout darkMode={darkMode} onToggleTheme={onToggleTheme} />}>
+            <Route path="/" element={<Home />} />
+            <Route 
+              path="/detect" 
+              element={
+                <DetectPage 
+                  predictionData={predictionData} 
+                  history={history} 
+                  onResult={onResult} 
+                  onReset={onReset} 
+                  onSelectHistory={onSelectHistory} 
+                  onClearHistory={onClearHistory} 
+                />
+              } 
+            />
+            <Route path="/about" element={<AboutPage />} />
+            <Route 
+              path="/settings" 
+              element={
+                <SettingsPage 
+                  darkMode={darkMode} 
+                  onToggleTheme={onToggleTheme} 
+                  onClearHistory={onClearHistory} 
+                />
+              } 
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </AnimatePresence>
+    </ErrorBoundary>
+  );
+};
+
 const App: React.FC = () => {
   const [predictionData, setPredictionData] = useState<any | null>(null);
-  const [history, setHistory] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('agri-history');
-      return saved ? JSON.parse(saved) : [];
-    } catch (err) {
-      console.error('Failed to parse history:', err);
-      return [];
-    }
-  });
+  
+  // Safe history initialization
+  const [history, setHistory] = useState<any[]>(() => 
+    getSafeItem('agri-history', [], (val) => Array.isArray(val))
+  );
 
+  // Safe theme initialization
   const [darkMode, setDarkMode] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('agri-theme');
-      return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    } catch {
-      return false;
-    }
+    const saved = getSafeItem('agri-theme', '');
+    const allowed = ['light', 'dark'];
+    const validated = allowed.includes(saved) ? saved : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    return validated === 'dark';
   });
 
   // Sync theme with DOM and localStorage
@@ -37,16 +136,16 @@ const App: React.FC = () => {
     const root = document.documentElement;
     if (darkMode) {
       root.classList.add('dark');
-      localStorage.setItem('agri-theme', 'dark');
+      setSafeItem('agri-theme', 'dark');
     } else {
       root.classList.remove('dark');
-      localStorage.setItem('agri-theme', 'light');
+      setSafeItem('agri-theme', 'light');
     }
   }, [darkMode]);
 
   // Sync history with localStorage
   useEffect(() => {
-    localStorage.setItem('agri-history', JSON.stringify(history));
+    setSafeItem('agri-history', history);
   }, [history]);
 
   const handleResult = (result: any) => {
@@ -75,43 +174,22 @@ const App: React.FC = () => {
     setPredictionData(null);
   };
 
+  const handleToggleTheme = () => {
+    setDarkMode(!darkMode);
+  };
+
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout darkMode={darkMode} onToggleTheme={() => setDarkMode(!darkMode)} />}>
-          <Route path="/" element={<Home />} />
-          <Route 
-            path="/detect" 
-            element={
-              <DetectPage 
-                predictionData={predictionData} 
-                history={history} 
-                onResult={handleResult} 
-                onReset={handleReset} 
-                onSelectHistory={handleSelectHistory} 
-                onClearHistory={handleClearHistory} 
-              />
-            } 
-          />
-          <Route 
-            path="/chatbot" 
-            element={<ChatbotPage prediction={predictionData} />} 
-          />
-          <Route path="/about" element={<AboutPage />} />
-          <Route 
-            path="/settings" 
-            element={
-              <SettingsPage 
-                darkMode={darkMode} 
-                onToggleTheme={() => setDarkMode(!darkMode)} 
-                onClearHistory={handleClearHistory} 
-              />
-            } 
-          />
-          {/* Fallback route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <AnimatedRoutes 
+        predictionData={predictionData}
+        history={history}
+        onResult={handleResult}
+        onReset={handleReset}
+        onSelectHistory={handleSelectHistory}
+        onClearHistory={handleClearHistory}
+        darkMode={darkMode}
+        onToggleTheme={handleToggleTheme}
+      />
     </BrowserRouter>
   );
 };

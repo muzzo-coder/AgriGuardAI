@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Check, AlertCircle, Loader2, Camera, RefreshCcw, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Check, AlertCircle, Loader2, Camera, RefreshCcw, Image as ImageIcon, Sparkles, BrainCircuit, TextQuote, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
@@ -13,6 +13,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   const { t, i18n } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -26,7 +27,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       if (!selectedFile.type.startsWith('image/')) {
-        setError('Please select an image file (PNG, JPG, HEIF).');
+        setError('Please select a valid diagnostic image (PNG, JPG).');
         return;
       }
       setFile(selectedFile);
@@ -36,16 +37,23 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    console.log("Sending description:", description);
+    
+    if (!file && !description.trim()) {
+      alert("Please upload image or describe symptoms");
+      setError('Please provide an image or describe symptoms.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
     const formData = new FormData();
-    formData.append('image', file);
+    if (file) formData.append('image', file);
+    if (description.trim()) formData.append('description', description);
     formData.append('language', i18n.language.split('-')[0]);
 
     try {
-      const response = await api.post('/api/predict', formData, {
+      const response = await api.post('/api/diagnose', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -53,11 +61,11 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
       if (response.data.status === 'success') {
         onResult(response.data);
       } else {
-        setError(response.data.message || 'Analysis failed.');
+        setError(response.data.error || 'Diagnostic analysis failed.');
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || t('err_server_fail'));
+      console.error("API Error:", err);
+      setError(err.response?.data?.error || 'Unable to analyze. Please check your network and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -72,8 +80,12 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
 
   const startCamera = async () => {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera interface not supported in this environment.');
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment', width: { ideal: 1024 }, height: { ideal: 1024 } } 
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -81,9 +93,12 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
       }
       setIsCameraOpen(true);
       setError(null);
-    } catch (err) {
-      console.error(err);
-      setError(t('err_camera_fail'));
+    } catch (err: any) {
+      console.error('Camera Access Error:', err);
+      let errorMsg = 'Camera access denied or not supported.';
+      if (err.name === 'NotAllowedError') errorMsg = 'Permission denied. Please enable camera access in your browser settings.';
+      if (err.name === 'NotFoundError') errorMsg = 'No camera found on this device.';
+      setError(errorMsg);
     }
   };
 
@@ -107,12 +122,12 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
         
         canvas.toBlob((blob) => {
           if (blob) {
-            const capturedFile = new File([blob], `webcam_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            const capturedFile = new File([blob], `neural_scan_${Date.now()}.jpg`, { type: 'image/jpeg' });
             setFile(capturedFile);
             setPreview(URL.createObjectURL(capturedFile));
             stopCamera();
           }
-        }, 'image/jpeg', 0.9);
+        }, 'image/jpeg', 0.95);
       }
     }
   };
@@ -126,146 +141,125 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   }, []);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 mb-20 fade-in">
-      <div className={`card-clean p-8 ${file ? 'border-emerald-500 bg-emerald-50/5' : 'border-dashed border-2'}`}>
-        <input 
-          type="file" 
-          className="hidden" 
-          ref={fileInputRef} 
-          onChange={handleFileChange}
-          accept="image/*"
-        />
+    <div className="w-full max-w-4xl mx-auto mb-20 px-4 sm:px-0 space-y-10">
+      <div className={`card-clean overflow-hidden transition-all duration-500 ${(file || isCameraOpen || description) ? 'border-teal-500 bg-teal-50/5' : 'border-dashed border-2 bg-gray-50/30'}`}>
+        <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Left side: Image Input */}
+            <div className="p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800 flex flex-col justify-center min-h-[350px]">
+                <input 
+                    type="file" 
+                    className="hidden" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange}
+                    accept="image/*"
+                />
 
-        <div className="text-center">
-          <AnimatePresence mode="wait">
-            {isCameraOpen ? (
-              <motion.div 
-                key="camera"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative w-full aspect-video bg-slate-900 rounded-xl overflow-hidden shadow-clinical">
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    playsInline 
-                    className="w-full h-full object-cover mirror"
-                  />
-                  <canvas ref={canvasRef} className="hidden" />
+                <AnimatePresence mode="wait">
+                    {isCameraOpen ? (
+                    <motion.div key="camera" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+                        <div className="relative aspect-square bg-gray-950 rounded-3xl overflow-hidden shadow-2xl border border-white/5">
+                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                            <canvas ref={canvasRef} className="hidden" />
+                        </div>
+                        <div className="flex justify-center gap-4">
+                            <button onClick={stopCamera} className="btn-secondary rounded-2xl w-14 h-14 flex items-center justify-center p-0"><X size={24} /></button>
+                            <button onClick={captureImage} className="btn-primary rounded-2xl px-8 flex items-center gap-4 shadow-xl shadow-teal-500/20"><Camera size={20} /> Capture</button>
+                        </div>
+                    </motion.div>
+                    ) : file ? (
+                    <motion.div key="preview" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6 flex flex-col items-center">
+                        <div className="relative group w-full max-w-sm aspect-square bg-gray-100 dark:bg-gray-800 rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800">
+                            <img src={preview!} className="w-full h-full object-cover" alt="Specimen Preview" />
+                            <button onClick={clearFile} className="absolute top-4 right-4 p-3 bg-gray-950/40 hover:bg-red-600 text-white rounded-2xl backdrop-blur-xl transition-all shadow-xl"><X size={20} /></button>
+                        </div>
+                        <div className="flex items-center gap-3 text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest bg-teal-50 dark:bg-teal-900/30 px-4 py-2 rounded-xl">
+                            <ImageIcon size={14} /> Specimen Loaded
+                        </div>
+                    </motion.div>
+                    ) : (
+                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-6">
+                        <div className="w-20 h-20 bg-teal-50 dark:bg-teal-900/10 rounded-[1.75rem] flex items-center justify-center mx-auto shadow-inner group cursor-pointer hover:scale-105 transition-all" onClick={() => fileInputRef.current?.click()}>
+                            <ImageIcon className="text-teal-600 dark:text-teal-400 w-8 h-8 group-hover:scale-110 transition-transform" />
+                        </div>
+                        <div>
+                            <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Leaf Specimen</h4>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Upload image or use camera</p>
+                        </div>
+                        <div className="flex gap-3 justify-center">
+                            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">Browser</button>
+                            <button onClick={startCamera} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">Camera</button>
+                        </div>
+                    </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* Right side: Text Input */}
+            <div className="p-8 flex flex-col justify-center bg-gray-50/30 dark:bg-gray-900/10">
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                        <TextQuote size={18} className="text-teal-600 dark:text-teal-400" />
+                        <div>
+                            <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Symptom Description</h4>
+                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Describe in your own words</p>
+                        </div>
+                    </div>
+                    
+                    <textarea 
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Example: Yellow spots appearing on the edges of lower leaves. Some leaves are drying up..."
+                        className="w-full h-48 p-5 bg-white dark:bg-gray-900 border-2 border-gray-100 dark:border-gray-800 rounded-3xl outline-none focus:border-teal-500 transition-all text-sm font-medium dark:text-white resize-none shadow-inner"
+                        disabled={isLoading}
+                    />
+                    
+                    <div className="flex flex-wrap gap-2">
+                        {['Yellow leaves', 'White powder', 'Dry edges', 'Spotting'].map(tip => (
+                            <button 
+                                key={tip}
+                                onClick={() => setDescription(prev => prev ? `${prev}, ${tip.toLowerCase()}` : tip)}
+                                className="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-[9px] font-black text-gray-400 uppercase tracking-widest rounded-lg hover:border-teal-500 hover:text-teal-600 transition-all"
+                            >
+                                + {tip}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                
-                <div className="mt-8 flex gap-3">
-                  <button onClick={stopCamera} className="btn-secondary px-5">
-                    <X size={20} />
-                  </button>
-                  <button 
-                    onClick={captureImage}
-                    className="btn-primary flex items-center gap-3"
-                  >
-                    <Camera size={20} />
-                    {t('btn_capture')}
-                  </button>
-                </div>
-              </motion.div>
-            ) : !file ? (
-              <motion.div 
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center py-6"
-              >
-                <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl flex items-center justify-center mb-6">
-                  <ImageIcon className="text-emerald-600 w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-heading">{t('upload_title')}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 max-w-xs mx-auto">
-                  {t('upload_subtitle')}
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                   <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn-primary flex items-center justify-center gap-3"
-                   >
-                    <Upload size={18} />
-                    {t('btn_analyze')}
-                   </button>
-                   <button 
-                    onClick={startCamera}
-                    className="btn-secondary flex items-center justify-center gap-3"
-                   >
-                    <Camera size={18} />
-                    {t('btn_open_camera')}
-                   </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div 
-                key="preview"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative w-full max-w-md aspect-square bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden shadow-clinical border border-slate-200 dark:border-slate-800">
-                  <img src={preview!} className="w-full h-full object-cover" alt="Preview" />
-                  <button 
-                    onClick={clearFile}
-                    className="absolute top-4 right-4 p-2 bg-slate-900/60 text-white rounded-lg hover:bg-red-500 backdrop-blur-md transition-all"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                
-                <div className="mt-8 flex flex-col items-center w-full">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-5 py-2 rounded-full border border-emerald-100 dark:border-emerald-900 mb-8 uppercase tracking-widest">
-                    <Check size={14} /> {file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name}
-                  </div>
-                  
-                  <div className="flex gap-4 w-full justify-center">
-                    <button
-                      onClick={handleUpload}
-                      disabled={isLoading}
-                      className="btn-primary flex-1 max-w-[200px] flex items-center justify-center gap-3"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          {t('btn_analyzing')}
-                        </>
-                      ) : (
-                        <>
-                          <Check size={18} />
-                          {t('btn_analyze')}
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => { clearFile(); startCamera(); }}
-                      disabled={isLoading}
-                      className="btn-secondary px-5"
-                      title={t('btn_retake')}
-                    >
-                      <RefreshCcw size={20} />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            </div>
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        {error && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="mt-6 p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl flex items-center gap-3 text-red-700 dark:text-red-400 text-sm font-semibold shadow-sm"
+      {/* Execute Section */}
+      <div className="flex flex-col items-center space-y-6">
+          <button
+            onClick={handleUpload}
+            disabled={isLoading || (!file && !description.trim())}
+            className="w-full max-w-md py-6 bg-teal-700 hover:bg-teal-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white rounded-[2rem] font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-teal-900/20 active:scale-[0.98]"
           >
-            <AlertCircle size={18} /> {error}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Analyzing Plant Condition...
+              </>
+            ) : (
+              <>
+                <BrainCircuit size={22} />
+                Analyze Specimen
+              </>
+            )}
+          </button>
+          
+          <div className="flex items-center gap-3 opacity-30">
+              <Sparkles size={14} className="text-teal-500" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Neural Engine RAG-Enhanced Active</span>
+          </div>
+      </div>
+
+      <AnimatePresence>
+        {error && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-[2rem] flex items-center gap-6 shadow-xl">
+            <AlertCircle size={24} className="text-red-600 shrink-0" />
+            <p className="text-xs font-black uppercase tracking-tight text-red-800 dark:text-red-400">{error}</p>
           </motion.div>
         )}
       </AnimatePresence>

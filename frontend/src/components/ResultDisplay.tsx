@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Droplets, ShieldCheck, AlertCircle, FileText, ClipboardList } from 'lucide-react';
+import type { Variants } from 'framer-motion';
+import { ShieldCheck, ClipboardList, Info, Download, Stethoscope, Microscope, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface ResultDisplayProps {
@@ -9,115 +10,171 @@ interface ResultDisplayProps {
 
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ result }) => {
   const { t } = useTranslation();
-  if (!result || !result.prediction) return null;
+  if (!result || !result.diagnosis) return null;
 
-  const { prediction } = result;
+  const { diagnosis } = result;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const severityColor = (severity: string) => {
-    switch (severity?.toLowerCase()) {
-      case 'critical': return 'text-red-700 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30';
-      case 'high': return 'text-orange-700 bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30';
-      case 'medium': return 'text-amber-700 bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30';
-      default: return 'text-emerald-700 bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30';
+  const containerVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.6, 
+        ease: [0.16, 1, 0.3, 1], 
+        staggerChildren: 0.1 
+      }
+    }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { 
+        opacity: 1, 
+        y: 0,
+        transition: {
+            duration: 0.4,
+            ease: "easeOut"
+        }
     }
   };
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto px-6 pb-20 fade-in"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="max-w-6xl mx-auto px-4 sm:px-0 pb-20"
     >
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; color: black !important; }
-          .glass { border: none !important; box-shadow: none !important; }
+          body { background: white !important; color: #111 !important; }
+          .card-clean { border: 1px solid #eee !important; box-shadow: none !important; margin: 0 !important; }
+          .glass-minimal { display: none !important; }
         }
       `}</style>
       
-      <div className="card-clean p-8 md:p-12 overflow-hidden relative">
-        {/* Healthcare report header style */}
-        <div className="flex flex-col md:flex-row justify-between items-start gap-6 border-b border-slate-100 dark:border-slate-800 pb-10 mb-10">
-          <div className="flex-1">
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border mb-6 ${severityColor(prediction.severity)}`}>
-               {t('result_severity', { severity: prediction.severity })}
+      <div className="card-clean p-12 md:p-16 relative overflow-hidden bg-white dark:bg-[#0F172A]">
+        {/* Report Identification */}
+        <div className="absolute top-0 right-0 p-8 flex flex-col items-end opacity-20 pointer-events-none">
+            <div className="text-[10px] font-black uppercase tracking-[0.4em]">Clinical Plant Pathology Report</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.4em] mt-1">Report ID: {Math.random().toString(36).substring(7).toUpperCase()}</div>
+        </div>
+
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row gap-12 border-b border-gray-100 dark:border-gray-800 pb-12 mb-12">
+          <div className="flex-1 space-y-8">
+            <div className="space-y-4">
+                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-sm bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400 border-teal-100 dark:border-teal-900/40">
+                    <Microscope size={12} />
+                    Verified Diagnostic Result
+                </div>
+                <h2 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white font-heading tracking-tight leading-[1.1]">
+                {diagnosis.disease}
+                </h2>
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white font-heading leading-tight mb-4">
-              {prediction.name}
-            </h2>
-            <div className="flex items-center gap-4">
-               <div className="flex-1 max-w-[200px] h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                 <motion.div 
-                   initial={{ width: 0 }}
-                   animate={{ width: `${prediction.confidence * 100}%` }}
-                   transition={{ duration: 1.5, ease: "easeOut" }}
-                   className="h-full bg-emerald-500 rounded-full"
-                 />
+
+            <div className="space-y-4">
+                <div className="flex items-center justify-between max-w-sm">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Confidence Index</span>
+                    <span className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest">{diagnosis.confidence} Precision</span>
+                </div>
+               <div className="w-full max-w-sm h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden p-0.5">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: diagnosis.confidence }}
+                    transition={{ duration: 1.5, ease: [0.34, 1.56, 0.64, 1] }}
+                    className="h-full bg-teal-500 rounded-full shadow-[0_0_12px_rgba(20,184,166,0.3)]"
+                  />
                </div>
-               <span className="text-sm font-black text-emerald-600 uppercase tracking-tighter">{Math.round(prediction.confidence * 100)}% Match</span>
             </div>
           </div>
           
-          <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 w-full md:w-64">
-            <div className="flex items-center gap-2 mb-3">
-              <ClipboardList size={16} className="text-slate-400" />
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('result_diagnostic_summary')}</h4>
+          <motion.div variants={itemVariants} className="md:w-96 bg-gray-50 dark:bg-gray-900/50 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-6">
+            <div className="flex items-center gap-3">
+              <ClipboardList size={18} className="text-teal-600 dark:text-teal-400" />
+              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">Primary Cause</h4>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              {prediction.description}
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
+              {diagnosis.cause}
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Clinical Protocols */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16">
+          <motion.div variants={itemVariants} className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-[1.25rem] bg-teal-50 dark:bg-teal-900/20 shadow-sm border border-teal-100 dark:border-teal-800 flex items-center justify-center">
+                <Stethoscope className="text-teal-600 dark:text-teal-400 w-6 h-6" />
+              </div>
+              <div>
+                  <h4 className="font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight text-base font-heading">Recovery Protocol</h4>
+                  <p className="text-[10px] font-bold text-teal-600/70 dark:text-teal-400/50 uppercase tracking-widest leading-none mt-1">Specialized Organic Steps</p>
+              </div>
+            </div>
+            <div className="p-8 bg-gray-50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800 rounded-[2rem] text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium shadow-inner">
+              {diagnosis.treatment}
+            </div>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-[1.25rem] bg-amber-50 dark:bg-amber-900/20 shadow-sm border border-amber-100 dark:border-amber-800 flex items-center justify-center">
+                <ShieldCheck className="text-amber-600 dark:text-amber-400 w-6 h-6" />
+              </div>
+              <div>
+                  <h4 className="font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight text-base font-heading">Prevention Shield</h4>
+                  <p className="text-[10px] font-bold text-amber-600/70 dark:text-amber-400/50 uppercase tracking-widest leading-none mt-1">Long-term Resilience</p>
+              </div>
+            </div>
+            <div className="p-8 bg-gray-50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800 rounded-[2rem] text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium shadow-inner">
+              {diagnosis.prevention}
+            </div>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="md:col-span-2 space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-[1.25rem] bg-purple-50 dark:bg-purple-900/20 shadow-sm border border-purple-100 dark:border-purple-800 flex items-center justify-center">
+                <Sparkles className="text-purple-600 dark:text-purple-400 w-6 h-6" />
+              </div>
+              <div>
+                  <h4 className="font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight text-base font-heading">Expert Tips</h4>
+                  <p className="text-[10px] font-bold text-purple-600/70 dark:text-purple-400/50 uppercase tracking-widest leading-none mt-1">Additional Cultivation Intelligence</p>
+              </div>
+            </div>
+            <div className="p-8 bg-purple-50/30 dark:bg-purple-950/10 border border-purple-100 dark:border-purple-900/30 rounded-[2rem] text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
+              {diagnosis.tips}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Report Footer */}
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-between gap-10 pt-10 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-start gap-4 max-w-lg">
+            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-500">
+                <Info size={16} />
+            </div>
+            <p className="text-[10px] text-gray-400 font-bold leading-relaxed uppercase tracking-wider">
+              Diagnostic report generated by AgriGuard AI. Consult with local agricultural experts for critical crop management decisions.
             </p>
           </div>
-        </div>
 
-        {/* Actionable Insights Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center">
-                <Droplets className="text-emerald-600 w-4 h-4" />
-              </div>
-              <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight text-sm font-heading">{t('result_organic_treatment')}</h4>
-            </div>
-            <div className="p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              {prediction.treatment}
-            </div>
+          <div className="flex items-center gap-4 no-print shrink-0">
+              <button 
+                onClick={handlePrint}
+                className="btn-primary py-4 px-10 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 rounded-2xl shadow-xl shadow-teal-500/10"
+              >
+                <Download size={16} />
+                Download Report
+              </button>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center">
-                <ShieldCheck className="text-emerald-600 w-4 h-4" />
-              </div>
-              <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight text-sm font-heading">{t('result_prevention_protocol')}</h4>
-            </div>
-            <div className="p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              {prediction.prevention}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-start gap-3 max-w-md">
-            <AlertCircle className="text-amber-500 w-4 h-4 shrink-0 mt-0.5" />
-            <p className="text-[10px] text-slate-400 font-bold leading-normal uppercase tracking-wider">
-              {t('result_disclaimer')}
-            </p>
-          </div>
-
-          <button 
-            onClick={handlePrint}
-            className="btn-secondary no-print py-2.5 px-6 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
-          >
-            <FileText size={14} />
-            {t('result_download_report')}
-          </button>
-        </div>
+        </motion.div>
       </div>
     </motion.div>
   );
