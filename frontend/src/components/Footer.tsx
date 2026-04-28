@@ -12,7 +12,6 @@ const Footer: React.FC = () => {
       links: [
         { label: t('nav_home'), to: '/' },
         { label: t('nav_detect'), to: '/detect' },
-        { label: t('nav_chatbot'), to: '/chatbot' },
         { label: t('nav_about'), to: '/about' }
       ]
     },
@@ -20,8 +19,7 @@ const Footer: React.FC = () => {
       title: t('footer_features'),
       links: [
         { label: t('footer_feature_detection'), to: '/detect' },
-        { label: t('footer_feature_chatbot'), to: '/chatbot' },
-        { label: t('footer_feature_organic'), to: '/chatbot' }
+        { label: t('footer_feature_organic'), to: '/detect' }
       ]
     }
   ];

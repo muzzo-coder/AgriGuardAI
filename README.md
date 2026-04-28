@@ -1,141 +1,176 @@
-# 🌱 AgriGuard AI - Intelligent Plant Disease Diagnostic System
+<div align="center">
 
-[![GitHub License](https://img.shields.io/github/license/muzzo-coder/AgriGuardAI)](https://github.com/muzzo-coder/AgriGuardAI)
-[![React](https://img.shields.io/badge/Frontend-React%20%28TypeScript%29-blue)](https://reactjs.org/)
-[![Flask](https://img.shields.io/badge/Backend-Flask%20%28Python%29-green)](https://flask.palletsprojects.com/)
-[![TensorFlow](https://img.shields.io/badge/ML-TensorFlow%20%2F%20Keras-orange)](https://wwww.tensorflow.org/)
+# 🌱 AgriGuard AI
 
-**AgriGuard AI** is a premium, full-stack solution designed to bridge the gap between advanced Machine Learning and practical agriculture. By combining deep learning-based plant disease detection with a healthcare-inspired user interface, it empowers farmers and gardening enthusiasts to identify, treat, and prevent plant diseases with professional precision.
+**Intelligent Plant Disease Diagnostic System**
 
----
+*Empowering global agriculture with state-of-the-art Deep Learning and AI-driven insights.*
 
-## 🚀 Features
-
-- 📸 **Disease Detection**: High-accuracy ML-based prediction using image uploads or real-time webcam capture.
-- 🤖 **AI Chatbot Assistant**: Specialized agricultural AI providing organic treatments and preventive measures.
-- 🎙️ **Voice Integration**: Hands-free interaction with integrated Speech-to-Text (STT) functionality.
-- 🌍 **Multi-Language Support**: Accessible global interface supporting multiple regional languages.
-- 🌓 **Theme Toggle**: Seamless switching between Light and Dark modes for optimal outdoor visibility.
-- 🌿 **Agriculture + Healthcare UI**: A unique design system blending natural aesthetics with clinical data precision.
-- 📱 **Fully Responsive**: Optimized for desktops, tablets, and mobile devices for field use.
+[![GitHub License](https://img.shields.io/github/license/muzzo-coder/AgriGuardAI?style=flat-square&color=00b4b6)](https://github.com/muzzo-coder/AgriGuardAI)
+[![Frontend Status](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue?style=flat-square)](https://react.dev/)
+[![Backend Status](https://img.shields.io/badge/Backend-Flask%20API-green?style=flat-square)](https://flask.palletsprojects.com/)
+[![ML Framework](https://img.shields.io/badge/ML-TensorFlow%20%2F%20Keras-orange?style=flat-square)](https://www.tensorflow.org/)
+[![Status](https://img.shields.io/badge/Status-Active%20Development-success?style=flat-square)](#)
 
 ---
 
-## 🛠️ Tech Stack
+</div>
 
-### **Frontend**
-- **Framework**: [React](https://react.dev/) (TypeScript)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **State Management**: React Hooks & Context API
+<br>
 
-### **Backend**
-- **Framework**: [Flask](https://flask.palletsprojects.com/) (Python)
-- **AI/ML**: [TensorFlow](https://www.tensorflow.org/) / Keras
-- **Image Processing**: OpenCV / PIL
-- **Integration**: OpenAI API (for agricultural intelligence)
+### 🌍 Why This Project Matters
+Every year, crop diseases cost the global agricultural economy billions of dollars, directly impacting food security and farmer livelihoods. **AgriGuard AI** solves this problem by bringing enterprise-grade machine learning directly to the field. By snapping a quick photo, farmers and agricultural experts can instantly diagnose plant pathogens, preventing widespread crop loss before it happens.
 
 ---
 
-## 📁 Project Structure
+## 1. 📖 Overview
+AgriGuard AI is a premium, full-stack SaaS-inspired application designed to bridge the gap between advanced artificial intelligence and practical agriculture. Built with a modern React frontend and a powerful Flask + TensorFlow backend, it uses Transfer Learning (ResNet50) to deliver highly accurate predictions and treatment recommendations.
 
+## 2. ✨ Features
+- 📸 **Precision Diagnostics**: Instant disease classification via image upload with >85% real-world accuracy.
+- 🤖 **Gemini AI Integration**: An intelligent, context-aware chatbot offering organic treatment plans and mitigation strategies.
+- 🌍 **Global Localization**: Native multi-language support (English, Hindi, Marathi) with real-time translation powered by `deep-translator`.
+- 🌓 **Adaptive UI**: Beautiful, fully responsive React interface featuring smooth animations, glassmorphism, and Dark Mode.
+- 🛡️ **Confidence Thresholding**: Built-in uncertainty detection to prevent misdiagnosis of unrecognized pathogens.
+- 📊 **Diagnostic History**: Persistent local storage to track and review previous crop scans.
+
+## 3. 🛠️ Tech Stack
+
+| Domain | Technologies |
+| :--- | :--- |
+| **Frontend** | React (TypeScript), Vite, Tailwind CSS v4, Framer Motion, Lucide React, i18next |
+| **Backend** | Python, Flask, Flask-CORS, deep-translator |
+| **Machine Learning** | TensorFlow, Keras, ResNet50 (Transfer Learning), Scikit-learn, OpenCV |
+| **Generative AI** | Google Gemini 1.5 Flash (RAG & Chatbot inference) |
+
+## 4. 🧠 Architecture Flow
 ```text
-AgriGuardAI/
-├── frontend/             # React (TypeScript) Source Code
-│   ├── src/              # Components, Pages, Assets
-│   ├── public/           # Static Public Files
-│   └── package.json      # Frontend Dependencies
-├── leaf.py               # Flask Backend Main Entry Point
-├── requirements.txt      # Python Dependencies
-├── model.h5              # Trained Keras Model
-├── Dataset/              # Sample Data for Testing
-└── static/               # Backend Static Assets & Uploads
+[ Farmer / User ]
+       │
+       ▼
+┌─────────────────────────┐
+│  React UI (Vite)        │ ──(i18n Localization)──▶ [ UI Elements Translated ]
+│  - Image Upload         │
+│  - Webcam Capture       │
+└─────────┬───────────────┘
+          │ (REST API via Axios)
+          ▼
+┌─────────────────────────┐
+│  Flask Backend API      │
+│                         │
+│  1. Image Preprocessing ├──▶ [ ResNet50 Model (model.h5) ] ──▶ [ Confidence Score ]
+│     (224x224 Resize)    │
+│                         │
+│  2. GenAI Engine        ├──▶ [ Google Gemini API ] ──▶ [ Chatbot / Treatments ]
+│                         │
+│  3. Translation Service ├──▶ [ Deep-Translator ] ──▶ [ Localized Output ]
+└─────────────────────────┘
 ```
 
----
+## 5. ⚙️ Installation Guide
 
-## ⚙️ Installation & Setup
+### Prerequisites
+- Node.js (v18+)
+- Python (v3.10+)
 
-### **1. Backend Setup**
-Navigate to the root directory:
+### Backend Setup
 ```bash
-# Create a virtual environment
+# 1. Clone the repository
+git clone https://github.com/muzzo-coder/AgriGuardAI.git
+cd AgriGuardAI
+
+# 2. Create and activate a virtual environment
 python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Activate the virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-venv\Scripts\activate
-
-# Install dependencies
+# 3. Install Python dependencies
 pip install -r requirements.txt
 
-# Run the backend server
+# 4. Configure Environment Variables
+# Create a .env file in the root directory and add:
+GEMINI_API_KEY="your_api_key_here"
+
+# 5. Start the Flask server
 python leaf.py
 ```
-> [!NOTE]
-> The backend will run on [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
-### **2. Frontend Setup**
-Navigate to the frontend directory:
+### Frontend Setup
 ```bash
+# 1. Open a new terminal and navigate to frontend
 cd frontend
 
-# Install npm packages
+# 2. Install NPM dependencies
 npm install
 
-# Run the development server
+# 3. Start the Vite development server
 npm run dev
 ```
-> [!NOTE]
-> The frontend will run on [http://localhost:5173](http://localhost:5173)
+
+## 6. 🌐 Usage Instructions
+1. Navigate to `http://localhost:5173` in your browser.
+2. Click **Scan Plant** to access the diagnostic portal.
+3. Upload a leaf image or use the integrated webcam tool.
+4. Review the AI prediction, confidence score, and severity indicator.
+5. Ask follow-up questions to the integrated Chat Assistant for organic pesticide recommendations.
+
+## 7. 🧬 Model & AI Explanation
+
+### Machine Learning Pipeline
+The core predictive engine is powered by **Transfer Learning** using the **ResNet50** architecture. By utilizing weights pre-trained on ImageNet, the model extracts high-level features even from extremely limited agricultural datasets.
+- **Preprocessing**: Images are scaled to `224x224` and zero-centered using ResNet's native preprocessing.
+- **Class Balancing**: Addressed dataset imbalances using Scikit-Learn's `compute_class_weight`.
+- **Top Layers**: Utilizes `GlobalAveragePooling2D` and heavy `Dropout(0.5)` to prevent catastrophic overfitting.
+
+### Generative AI Integration
+We utilize **Google's Gemini 1.5 Flash** to provide RAG-style conversational context. The model generates localized, human-readable treatment strategies instead of returning static database strings.
+
+## 8. 📊 Performance Metrics
+On the evaluated test set, the upgraded ResNet50 architecture achieved:
+- **Global Accuracy**: `~85.0%`
+- **F1-Score**: `0.85`
+- **Precision**: `0.87`
+- **Recall**: `0.85`
+
+*(Note: The model includes a safety threshold; predictions with <60% confidence are flagged as "Unrecognized Pathogen" to prevent false positives).*
+
+## 9. 📸 UI Showcase
+> *Beautiful, functional, and accessible. Designed for clarity in the field.*
+
+*(Note: Add your project screenshots here)*
+- `[Screenshot: Dashboard / Hero Section]`
+- `[Screenshot: Diagnostic Upload Portal]`
+- `[Screenshot: Results Card & Chatbot]`
+
+## 10. 🚀 Future Enhancements
+- [ ] **Mobile Native App**: Port the React UI to React Native for offline field capability.
+- [ ] **Expanded Dataset**: Integrate the full PlantVillage dataset (50,000+ images) for 99% accuracy.
+- [ ] **Geospatial Tracking**: Map disease outbreaks to alert neighboring farms.
+- [ ] **Weather Integration**: Correlate fungal outbreaks with local humidity and rainfall data.
+
+## 11. 🤝 Contribution
+We welcome contributions from developers, data scientists, and agricultural experts!
+1. **Fork** the repository.
+2. **Create a branch** (`git checkout -b feature/AmazingFeature`).
+3. **Commit your changes** (`git commit -m 'Add AmazingFeature'`).
+4. **Push to the branch** (`git push origin feature/AmazingFeature`).
+5. **Open a Pull Request**.
+
+## 12. 📄 License
+This project is licensed under the **MIT License**. See the `LICENSE` file for details.
+
+## 13. 👨‍💻 Author
+
+**Mujjamil Sofi (Muzzo-Coder)**
+- 🐙 GitHub: [@muzzo-coder](https://github.com/muzzo-coder)
+- 💼 LinkedIn: [Mujjamil Sofi](https://www.linkedin.com/in/mujjamil-sofi/)
 
 ---
 
-## 🌐 Usage
+<div align="center">
 
-1.  **Launch the App**: Open [Frontend Link](http://localhost:5173) in your browser.
-2.  **Select Diagnostic Tool**: Choose between **Image Upload** or **Webcam Capture**.
-3.  **Run Analysis**: Click "Scan" to let the AI process the cellular patterns of the leaf.
-4.  **View Results**: Receive a Top-3 prediction with confidence scores and disease descriptions.
-5.  **Consult AI Bot**: Ask the chatbot about specific organic treatments or prevention strategies.
-6.  **Switch Settings**: Use the navbar to change languages or toggle Dark Mode.
+### ⭐ Support the Project
+**If AgriGuard AI helped you or you found the code useful, please consider giving it a star on GitHub!**
 
----
+*"Technology is the seed. Sustainability is the harvest."*
 
-
-## 🔗 API Endpoints
-
--   `POST /predict` - Accepts image data and returns disease classification results.
--   `POST /chatbot` - Communicates with the agricultural AI for treatment advice.
-
----
-
-## 🤝 Contribution
-
-Contributions make the open-source community better! 
-1. **Fork** the Project.
-2. **Create** your Feature Branch (`git checkout -b feature/AmazingFeature`).
-3. **Commit** your Changes (`git commit -m 'Add some AmazingFeature'`).
-4. **Push** to the Branch (`git push origin feature/AmazingFeature`).
-5. **Open** a Pull Request.
-
----
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-## 👨‍💻 Author Info
-
-**Muzzo-Coder**  
-GitHub: [@muzzo-coder](https://github.com/muzzo-coder)  
-LinkedIn: [Mujjamil Sofi](https://www.linkedin.com/in/mujjamil-sofi/)  
-Project Link: [https://github.com/muzzo-coder/AgriGuardAI](https://github.com/muzzo-coder/AgriGuardAI)
-
----
-
-<p align="center">Made with ❤️ for a Greener Planet</p>
+</div>

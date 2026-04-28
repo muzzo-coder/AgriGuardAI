@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, CheckCircle2, Info, Waves, Zap, ShieldCheck, Activity, Sprout } from 'lucide-react';
+import { AlertCircle, Info, Waves, Zap, ShieldCheck, Activity, Sprout } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 

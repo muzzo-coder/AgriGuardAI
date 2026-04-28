@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Check, AlertCircle, Loader2, Camera, RefreshCcw, Image as ImageIcon, Sparkles, BrainCircuit, TextQuote, Send } from 'lucide-react';
+import { X, AlertCircle, Loader2, Camera, Image as ImageIcon, Sparkles, BrainCircuit, TextQuote } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
@@ -17,6 +17,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -26,13 +27,36 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (!selectedFile.type.startsWith('image/')) {
-        setError('Please select a valid diagnostic image (PNG, JPG).');
-        return;
-      }
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
-      setError(null);
+      handleFileSelection(selectedFile);
+    }
+  };
+
+  const handleFileSelection = (selectedFile: File) => {
+    if (!selectedFile.type.startsWith('image/')) {
+      setError('Please select a valid diagnostic image (PNG, JPG).');
+      return;
+    }
+    setFile(selectedFile);
+    setPreview(URL.createObjectURL(selectedFile));
+    setError(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      handleFileSelection(droppedFile);
     }
   };
 
@@ -145,7 +169,12 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
       <div className={`card-clean overflow-hidden transition-all duration-500 ${(file || isCameraOpen || description) ? 'border-teal-500 bg-teal-50/5' : 'border-dashed border-2 bg-gray-50/30'}`}>
         <div className="grid grid-cols-1 md:grid-cols-2">
             {/* Left side: Image Input */}
-            <div className="p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800 flex flex-col justify-center min-h-[350px]">
+            <div 
+              className={`p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800 flex flex-col justify-center min-h-[350px] transition-colors ${isDragging ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-500 border-dashed' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
                 <input 
                     type="file" 
                     className="hidden" 
@@ -182,12 +211,12 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                             <ImageIcon className="text-teal-600 dark:text-teal-400 w-8 h-8 group-hover:scale-110 transition-transform" />
                         </div>
                         <div>
-                            <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Leaf Specimen</h4>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Upload image or use camera</p>
+                            <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">{t('upload_drag_drop', { defaultValue: 'Drag & drop leaf image here' })}</h4>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{t('upload_or_browse', { defaultValue: 'or click to browse files' })}</p>
                         </div>
                         <div className="flex gap-3 justify-center">
-                            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">Browser</button>
-                            <button onClick={startCamera} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">Camera</button>
+                            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">{t('btn_browser')}</button>
+                            <button onClick={startCamera} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">{t('btn_camera')}</button>
                         </div>
                     </motion.div>
                     )}
@@ -200,27 +229,32 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                     <div className="flex items-center gap-3">
                         <TextQuote size={18} className="text-teal-600 dark:text-teal-400" />
                         <div>
-                            <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Symptom Description</h4>
-                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Describe in your own words</p>
+                            <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{t('symptom_title')}</h4>
+                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{t('symptom_subtitle')}</p>
                         </div>
                     </div>
                     
                     <textarea 
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Example: Yellow spots appearing on the edges of lower leaves. Some leaves are drying up..."
+                        placeholder={t('symptom_placeholder')}
                         className="w-full h-48 p-5 bg-white dark:bg-gray-900 border-2 border-gray-100 dark:border-gray-800 rounded-3xl outline-none focus:border-teal-500 transition-all text-sm font-medium dark:text-white resize-none shadow-inner"
                         disabled={isLoading}
                     />
                     
                     <div className="flex flex-wrap gap-2">
-                        {['Yellow leaves', 'White powder', 'Dry edges', 'Spotting'].map(tip => (
+                        {[
+                            { text: 'Yellow leaves', key: 'tip_yellow_leaves' },
+                            { text: 'White powder', key: 'tip_white_powder' },
+                            { text: 'Dry edges', key: 'tip_dry_edges' },
+                            { text: 'Spotting', key: 'tip_spotting' }
+                        ].map(tip => (
                             <button 
-                                key={tip}
-                                onClick={() => setDescription(prev => prev ? `${prev}, ${tip.toLowerCase()}` : tip)}
+                                key={tip.key}
+                                onClick={() => setDescription(prev => prev ? `${prev}, ${t(tip.key).toLowerCase()}` : t(tip.key))}
                                 className="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-[9px] font-black text-gray-400 uppercase tracking-widest rounded-lg hover:border-teal-500 hover:text-teal-600 transition-all"
                             >
-                                + {tip}
+                                + {t(tip.key)}
                             </button>
                         ))}
                     </div>
@@ -239,19 +273,19 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
             {isLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Analyzing Plant Condition...
+                {t('btn_analyzing', { defaultValue: 'Analyzing Plant Condition...' })}
               </>
             ) : (
               <>
                 <BrainCircuit size={22} />
-                Analyze Specimen
+                {t('btn_analyze', { defaultValue: 'Analyze Specimen' })}
               </>
             )}
           </button>
           
           <div className="flex items-center gap-3 opacity-30">
               <Sparkles size={14} className="text-teal-500" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Neural Engine RAG-Enhanced Active</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('neural_engine_active')}</span>
           </div>
       </div>
 

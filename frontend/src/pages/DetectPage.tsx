@@ -2,7 +2,6 @@ import React from 'react';
 import Uploader from '../components/Uploader';
 import ResultDisplay from '../components/ResultDisplay';
 import HistoryPanel from '../components/HistoryPanel';
-import FieldIntelligence from '../components/FieldIntelligence';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -50,12 +49,12 @@ const DetectPage: React.FC<DetectPageProps> = ({
                 <div className="text-center mb-16 space-y-6">
                   <div className="inline-block px-4 py-1.5 bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800 rounded-full mb-4">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">
-                      {t('detect_badge', { defaultValue: 'Laboratory Standards' })}
+                      {t('detect_badge', { defaultValue: 'AI-Powered Crop Diagnosis' })}
                     </span>
                   </div>
-                  <h1 className="text-4xl md:text-6xl font-black font-heading text-gray-900 dark:text-white leading-[1.1]">{t('detect_title', { defaultValue: 'Intelligent RAG-Powered Diagnosis' })}</h1>
+                  <h1 className="text-4xl md:text-6xl font-black font-heading text-gray-900 dark:text-white leading-[1.1]">{t('detect_title', { defaultValue: 'Your Digital Plant Doctor' })}</h1>
                   <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
-                    {t('detect_subtitle', { defaultValue: 'Our RAG-enhanced neural engine analyzes both visual specimens and symptom descriptions for clinical-grade precision.' })}
+                    {t('detect_subtitle', { defaultValue: 'Upload a photo of your plant for an instant diagnosis powered by AI. Get precise identification and organic treatment protocols.' })}
                   </p>
                 </div>
                 
@@ -88,14 +87,12 @@ const DetectPage: React.FC<DetectPageProps> = ({
           </AnimatePresence>
         </div>
         
-        {/* Sidebar */}
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
           className="lg:col-span-4 xl:col-span-3 space-y-10"
         >
-          <FieldIntelligence prediction={predictionData} />
           <div className="sticky top-24">
             <HistoryPanel 
               items={history} 

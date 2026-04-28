@@ -3,7 +3,6 @@ import os
 import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
-import pandas as pd
 
 class RAGEngine:
     def __init__(self, knowledge_path='agricultural_knowledge.json', index_path='faiss_index.bin', model_name='all-MiniLM-L6-v2'):
@@ -64,13 +63,17 @@ class RAGEngine:
         faiss.write_index(self.index, self.index_path)
         print(f"FAISS index built and saved to {self.index_path}")
 
-    def retrieve_context(self, query, k=2):
+    def retrieve_context(self, query, k=3):
         if not self.index or not self.documents:
             return "No local knowledge available."
 
         # Handle empty or very short queries
         if not query or len(str(query).strip()) < 3:
             return "Query too short for specific knowledge retrieval. Please provide more detail about the symptoms."
+
+        # Handle healthy fallback
+        if "healthy" in str(query).lower() and "disease" not in str(query).lower():
+            return "Disease: Healthy Plant\nSymptoms: Lush green leaves, strong stems, and steady growth.\nCauses: Balanced nutrients, proper watering, and good environmental conditions.\nTreatment: No treatment required. Continue regular maintenance.\nPrevention: Maintain good hygiene and monitor regularly for early signs of issues.\nTips: Healthy plants are the best defense against diseases and pests."
 
         # Convert dict to string if necessary to avoid unhashable error
         query_str = str(query) if isinstance(query, dict) else query

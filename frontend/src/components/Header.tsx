@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Leaf, Sun, Moon, Menu, X, Settings, Info, MessageSquare, Search, Home } from 'lucide-react';
+import { Leaf, Sun, Moon, Menu, X, Settings, Info, Search, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 

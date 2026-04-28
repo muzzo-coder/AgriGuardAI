@@ -102,14 +102,14 @@ DISEASE_INFO = {
         "severity": "Medium"
     },
     7: {
-        "name": "Tomato Yellow Leaf Curl Virus Disease",
+        "name": "Leaf Curl Virus Disease",
         "description": "TYLCV is a viral disease transmitted by silverleaf whiteflies. It causes yellowing and upward curling of leaves.",
         "treatment": "Primarily involves controlling the whitefly population. No cure for existing virus.",
         "prevention": "Use insect-proof netting. Plant resistant varieties. Control weeds.",
         "severity": "High"
     },
     8: {
-        "name": "Tomato Mosaic Virus Disease",
+        "name": "Mosaic Virus Disease",
         "description": "ToMV causes mottling and discoloration of leaves, often in a mosaic pattern.",
         "treatment": "No cure. Remove and destroy infected plants to prevent spread.",
         "prevention": "Sanitize tools. Avoid touching plants after using tobacco. Control weeds.",
@@ -124,9 +124,12 @@ DISEASE_INFO = {
     }
 }
 
+from tensorflow.keras.applications.resnet50 import preprocess_input
+
 def get_prediction(image_path):
-    test_image = load_img(image_path, target_size=(128, 128))
-    test_image = img_to_array(test_image)/255.0
+    test_image = load_img(image_path, target_size=(224, 224))
+    test_image = img_to_array(test_image)
+    test_image = preprocess_input(test_image)
     test_image = np.expand_dims(test_image, axis=0)
     
     predictions = model.predict(test_image)[0]
@@ -136,9 +139,14 @@ def get_prediction(image_path):
     confidence = float(predictions[top_idx])
     info = DISEASE_INFO.get(top_idx, {})
     
+    name = info.get("name", "Unknown")
+    
+    if confidence < 0.6:
+        name = "Uncertain / Unrecognized Pathogen"
+        
     return {
         "id": int(top_idx),
-        "name": info.get("name", "Unknown"),
+        "name": name,
         "confidence": confidence,
         "description": info.get("description", ""),
         "treatment": info.get("treatment", ""),
@@ -182,6 +190,37 @@ def diagnose():
             image_file.save(file_path)
             image_url = f"/static/upload/{filename}"
             prediction_result = get_prediction(file_path)
+            
+            # Short-circuit for healthy plant
+            if prediction_result and prediction_result.get('id') == 2:
+                final_diagnosis = {
+                    "disease": "Healthy Plant",
+                    "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%",
+                    "cause": "No disease detected. Plant appears healthy and fresh.",
+                    "treatment": "No treatment required. Continue regular maintenance.",
+                    "prevention": "Maintain good hygiene and monitor regularly for early signs of issues."
+                }
+                
+                # Translate Final Result
+                if lang != 'en':
+                    for key in final_diagnosis:
+                        if key != 'confidence':
+                            final_diagnosis[key] = translate_text(final_diagnosis[key], lang)
+                
+                prediction_shim = {
+                    "name": final_diagnosis.get("disease"),
+                    "severity": "Low",
+                    "description": final_diagnosis.get("cause"),
+                    "treatment": final_diagnosis.get("treatment"),
+                    "prevention": final_diagnosis.get("prevention")
+                }
+                
+                return jsonify({
+                    "status": "success",
+                    "diagnosis": final_diagnosis,
+                    "prediction": prediction_shim,
+                    "imageUrl": image_url
+                })
 
         # 3. Handle Text/Context Retrieval (RAG)
         # Combine user description with model prediction for better retrieval
@@ -202,33 +241,26 @@ def diagnose():
             retrieved_context = "Knowledge base search did not yield specific local results for this query. Fallback to general plant pathology knowledge: Fungal infections often present as spots or wilting, while viruses cause curling and mosaic patterns. Pests like mites cause stippling and webbing."
 
         system_prompt = (
-            "You are a world-class expert plant pathologist. Your goal is to provide a precise and actionable diagnostic report. "
-            "You MUST identify the MOST LIKELY disease based on the available data. "
-            "NEVER return 'Unknown condition' or 'No disease found' if there are any symptoms described. "
-            "Always choose the best match from your scientific knowledge base or the provided context."
+            "You are an expert plant pathologist. Provide a precise diagnostic report."
+            "Identify the MOST LIKELY disease based on the data."
+            "NEVER return 'Unknown condition' if there are symptoms."
         )
         
         prompt = f"""
         {system_prompt}
         
-        DIAGNOSTIC INPUTS:
-        - Image-Based ML Prediction: {prediction_result.get('name') if prediction_result else 'None'}
-        - ML Confidence Level: {prediction_result.get('confidence', 0) if prediction_result else 0.0:.2f}
-        - User-Reported Symptoms: {description if description else 'None'}
-        - Relevant Knowledge Context: {retrieved_context}
-        
-        SCIENTIFIC TASK:
-        Analyze the symptoms and cross-reference with the knowledge base. Identify the specific pathogen or disease.
-        If the user description points to a specific disease (e.g., Early Blight) but the model is unsure, trust the symptom description.
+        INPUTS:
+        - ML Prediction: {prediction_result.get('name') if prediction_result else 'None'} ({prediction_result.get('confidence', 0) if prediction_result else 0.0:.2f})
+        - Symptoms: {description if description else 'None'}
+        - Context: {retrieved_context}
         
         OUTPUT FORMAT (STRICT JSON):
         {{
-          "disease": "Most Likely Disease Name (Be specific, e.g., 'Tomato Early Blight')",
+          "disease": "Disease Name",
           "confidence": "Estimation (e.g., 90%)",
-          "cause": "Specific pathogen or environmental cause",
-          "treatment": "Direct organic/clinical treatment steps",
-          "prevention": "Strategic prevention measures",
-          "tips": "Expert advice for the farmer"
+          "cause": "Specific cause",
+          "treatment": "Direct treatment steps",
+          "prevention": "Prevention measures"
         }}
         """
 
@@ -251,10 +283,10 @@ def diagnose():
             
             llm_thread = threading.Thread(target=run_gemini)
             llm_thread.start()
-            llm_thread.join(timeout=15)
+            llm_thread.join(timeout=20)
             
             if llm_thread.is_alive():
-                print("Gemini call timed out after 15 seconds. Switching to local fallback.")
+                print("Gemini call timed out after 20 seconds. Switching to local fallback.")
                 # We don't need to kill the thread, just proceed. It will finish or die with the process.
             
             if llm_result["data"]:
@@ -292,11 +324,10 @@ def diagnose():
 
                 final_diagnosis = {
                     "disease": fallback_disease,
-                    "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%" if prediction_result else "60% (Heuristic)",
-                    "cause": "Symptoms and local context suggest a specific pathogen. (Local Fallback Mode)",
-                    "treatment": "Apply organic fungicides/pesticides immediately. " + (prediction_result.get('treatment', '') if prediction_result else "Prune infected areas."),
-                    "prevention": "Improve airflow and maintain consistent watering. " + (prediction_result.get('prevention', '') if prediction_result else "Avoid overhead irrigation."),
-                    "tips": "RAG engine prioritized this diagnosis. Deep AI check skipped due to connectivity."
+                    "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%" if prediction_result else "60%",
+                    "cause": prediction_result.get('description', 'Pathogen identified through symptom pattern analysis.') if prediction_result else "Symptoms and local context suggest a specific pathogen.",
+                    "treatment": prediction_result.get('treatment', 'Apply organic fungicides/pesticides immediately.') if prediction_result else "Apply organic fungicides/pesticides immediately.",
+                    "prevention": prediction_result.get('prevention', 'Improve airflow and maintain consistent watering.') if prediction_result else "Improve airflow and maintain consistent watering."
                 }
         else:
             # No Gemini - Fallback to ML Model and RAG
@@ -310,11 +341,10 @@ def diagnose():
 
             final_diagnosis = {
                 "disease": fallback_disease,
-                "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%" if prediction_result else "65% (Local Heuristic)",
-                "cause": prediction_result.get('description', 'Pathogen identified through symptom pattern analysis.') if prediction_result else "Symptom patterns indicate a potential plant pathology based on knowledge base context.",
+                "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%" if prediction_result else "65%",
+                "cause": prediction_result.get('description', 'Pathogen identified through symptom pattern analysis.') if prediction_result else "Symptom patterns indicate a potential plant pathology.",
                 "treatment": prediction_result.get('treatment', 'Remove infected leaves and apply organic fungicide.') if prediction_result else "Immediate pruning of affected areas and application of organic neem oil or copper spray recommended.",
-                "prevention": prediction_result.get('prevention', 'Ensure proper soil health and crop rotation.') if prediction_result else "Improve spacing for airflow, avoid overhead watering, and maintain clean gardening tools.",
-                "tips": "Local Intelligence Mode. RAG context prioritized."
+                "prevention": prediction_result.get('prevention', 'Ensure proper soil health and crop rotation.') if prediction_result else "Improve spacing for airflow, avoid overhead watering, and maintain clean gardening tools."
             }
 
         # 5. Translate Final Result
@@ -348,6 +378,28 @@ def diagnose():
             "details": str(e),
             "traceback": traceback.format_exc()
         }), 500
+
+@app.route("/api/translate", methods=['POST'])
+def translate_endpoint():
+    data = request.json
+    if not data or 'texts' not in data or 'target' not in data:
+        return jsonify({"error": "Invalid request. Provide 'texts' object and 'target' language."}), 400
+    
+    texts = data['texts']
+    target = data['target']
+    
+    translated_texts = {}
+    for key, text in texts.items():
+        if key == 'confidence' or not isinstance(text, str):
+            translated_texts[key] = text
+        else:
+            translated_texts[key] = translate_text(text, target)
+            
+    return jsonify({
+        "status": "success",
+        "translated": translated_texts,
+        "target": target
+    })
 
 import socket
 

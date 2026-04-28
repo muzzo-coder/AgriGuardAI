@@ -8,6 +8,8 @@ import DetectPage from './pages/DetectPage';
 import AboutPage from './pages/AboutPage';
 import SettingsPage from './pages/SettingsPage';
 import { getSafeItem, setSafeItem, clearSafeItems } from './utils/storage';
+import { useTranslation } from 'react-i18next';
+import api from './api/axios';
 
 /**
  * Global Error Boundary for the React tree
@@ -28,39 +30,44 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-[#0B1120] flex items-center justify-center p-6 text-center">
-          <div className="max-w-md space-y-10">
-             <div className="w-20 h-20 bg-amber-500/10 rounded-[2rem] flex items-center justify-center mx-auto border border-amber-500/20">
-                <Leaf className="text-amber-500 w-10 h-10" />
-             </div>
-             <div className="space-y-4">
-                <h1 className="text-3xl font-black text-white font-heading">System Integrity Check</h1>
-                <p className="text-gray-400 leading-relaxed text-sm">
-                   The application encountered a critical runtime exception. This often results from corrupted local storage or an incompatible browser state.
-                </p>
-             </div>
-             <div className="flex flex-col gap-4">
-                <button 
-                  onClick={() => window.location.reload()}
-                  className="w-full py-4 bg-teal-500 hover:bg-teal-400 text-white font-black rounded-2xl transition-all shadow-lg shadow-teal-500/20 text-xs uppercase tracking-widest"
-                >
-                  Reload Neural Interface
-                </button>
-                <button 
-                  onClick={() => { clearSafeItems(['agri-theme', 'agri-history', 'i18nextLng']); window.location.reload(); }}
-                  className="w-full py-4 bg-gray-800 hover:bg-gray-700 text-gray-400 font-black rounded-2xl transition-all text-xs uppercase tracking-widest"
-                >
-                  Reset All Local Data
-                </button>
-             </div>
-          </div>
-        </div>
-      );
+      return <ErrorBoundaryContent />;
     }
     return this.props.children;
   }
 }
+
+const ErrorBoundaryContent = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="min-h-screen bg-[#0B1120] flex items-center justify-center p-6 text-center">
+      <div className="max-w-md space-y-10">
+         <div className="w-20 h-20 bg-amber-500/10 rounded-[2rem] flex items-center justify-center mx-auto border border-amber-500/20">
+            <Leaf className="text-amber-500 w-10 h-10" />
+         </div>
+         <div className="space-y-4">
+            <h1 className="text-3xl font-black text-white font-heading">{t('err_boundary_title')}</h1>
+            <p className="text-gray-400 leading-relaxed text-sm">
+               {t('err_boundary_desc')}
+            </p>
+         </div>
+         <div className="flex flex-col gap-4">
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-teal-500 hover:bg-teal-400 text-white font-black rounded-2xl transition-all shadow-lg shadow-teal-500/20 text-xs uppercase tracking-widest"
+            >
+              {t('err_boundary_reload')}
+            </button>
+            <button 
+              onClick={() => { clearSafeItems(['agri-theme', 'agri-history', 'i18nextLng']); window.location.reload(); }}
+              className="w-full py-4 bg-gray-800 hover:bg-gray-700 text-gray-400 font-black rounded-2xl transition-all text-xs uppercase tracking-widest"
+            >
+              {t('err_boundary_reset')}
+            </button>
+         </div>
+      </div>
+    </div>
+  );
+};
 
 /**
  * Creative Animated Routes Wrapper
@@ -116,6 +123,7 @@ const AnimatedRoutes: React.FC<any> = ({
 };
 
 const App: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [predictionData, setPredictionData] = useState<any | null>(null);
   
   // Safe history initialization
@@ -148,6 +156,24 @@ const App: React.FC = () => {
     setSafeItem('agri-history', history);
   }, [history]);
 
+  useEffect(() => {
+    const lang = i18n.language.split('-')[0];
+    console.log("Current Language:", lang);
+    if (predictionData && predictionData.diagnosis) {
+        api.post('/api/translate', {
+            texts: predictionData.diagnosis,
+            target: lang
+        }).then(res => {
+            if (res.data.status === 'success') {
+                setPredictionData({
+                    ...predictionData,
+                    diagnosis: res.data.translated
+                });
+            }
+        }).catch(err => console.error("Translation error:", err));
+    }
+  }, [i18n.language]);
+
   const handleResult = (result: any) => {
     const newEntry = {
       id: Date.now(),
@@ -164,7 +190,7 @@ const App: React.FC = () => {
   };
 
   const handleClearHistory = () => {
-    if (window.confirm('Are you sure you want to clear your field history? This action cannot be undone.')) {
+    if (window.confirm(t('confirm_clear_history'))) {
       setHistory([]);
       localStorage.removeItem('agri-history');
     }

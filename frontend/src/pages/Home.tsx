@@ -3,7 +3,7 @@ import Hero from '../components/Hero';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Search, MessageSquare, ShieldCheck, ArrowRight, Zap, Target, Heart } from 'lucide-react';
+import { Search, ShieldCheck, ArrowRight, Zap, Target, Heart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const Home: React.FC = () => {
@@ -42,7 +42,7 @@ const Home: React.FC = () => {
       <Hero />
       
       <section className="page-container -mt-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Feature Card: Detect */}
           <motion.div 
             variants={itemVariants}
@@ -66,28 +66,7 @@ const Home: React.FC = () => {
             </Link>
           </motion.div>
 
-          {/* Feature Card: AI Chat */}
-          <motion.div 
-            variants={itemVariants}
-            whileHover={{ y: -8 }}
-            className="card-clean p-10 flex flex-col items-start gap-6 card-hover"
-          >
-            <div className="w-14 h-14 bg-teal-50 dark:bg-teal-900/20 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400">
-              <MessageSquare size={28} />
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-2xl font-bold font-heading">{t('nav_chatbot', { defaultValue: 'AI Assistant' })}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                {t('home_chat_desc', { defaultValue: 'Personalized organic treatment protocols and preventive strategies.' })}
-              </p>
-            </div>
-            <Link 
-              to="/chatbot" 
-              className="mt-4 flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold text-sm hover:gap-3 transition-all group"
-            >
-              {t('home_consult_expert', { defaultValue: 'Consult Expert' })} <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </motion.div>
+
 
           {/* Feature Card: Safety/About */}
           <motion.div 

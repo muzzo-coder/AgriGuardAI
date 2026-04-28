@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, ShieldCheck, Cpu, Database, Globe2, Sparkles } from 'lucide-react';
+import { Leaf, ShieldCheck, Database, Globe2, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
