@@ -136,10 +136,11 @@ On the evaluated test set, the upgraded ResNet50 architecture achieved:
 ## 9. 📸 UI Showcase
 > *Beautiful, functional, and accessible. Designed for clarity in the field.*
 
-*(Note: Add your project screenshots here)*
-- `[Screenshot: Dashboard / Hero Section]`
-- `[Screenshot: Diagnostic Upload Portal]`
-- `[Screenshot: Results Card & Chatbot]`
+**Dashboard / Hero Section**
+![Dashboard / Hero Section](demo.png)
+
+**AgriGuard Application Interface**
+![Diagnostic Upload Portal](frontend/src/assets/hero.png)
 
 ## 10. 🚀 Future Enhancements
 - [ ] **Mobile Native App**: Port the React UI to React Native for offline field capability.
