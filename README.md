@@ -139,9 +139,6 @@ On the evaluated test set, the upgraded ResNet50 architecture achieved:
 **Dashboard / Hero Section**
 ![Dashboard / Hero Section](demo.png)
 
-**AgriGuard Application Interface**
-![Diagnostic Upload Portal](frontend/src/assets/hero.png)
-
 ## 10. 🚀 Future Enhancements
 - [ ] **Mobile Native App**: Port the React UI to React Native for offline field capability.
 - [ ] **Expanded Dataset**: Integrate the full PlantVillage dataset (50,000+ images) for 99% accuracy.
