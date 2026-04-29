@@ -96,12 +96,12 @@ const Home: React.FC = () => {
         <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
           <div className="space-y-4">
             <Zap className="mx-auto text-teal-600" size={32} />
-            <h4 className="text-3xl font-black font-heading">2.4s</h4>
+            <h4 className="text-3xl font-black font-heading">5.4s</h4>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{t('stats_speed', { defaultValue: 'Diagnosis Speed' })}</p>
           </div>
           <div className="space-y-4">
             <Target className="mx-auto text-teal-600" size={32} />
-            <h4 className="text-3xl font-black font-heading">98.2%</h4>
+            <h4 className="text-3xl font-black font-heading">84.62%</h4>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{t('stats_accuracy', { defaultValue: 'Prediction Accuracy' })}</p>
           </div>
           <div className="space-y-4">
