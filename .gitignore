@@ -43,3 +43,23 @@ frontend/.env
 # Dataset/
 # *.h5
 # *.json
+
+# Active large datasets
+Dataset_binary/
+Dataset_disease_v2/
+
+# Environments and symlinks
+.venv
+
+# Temporary uploaded files
+static/upload/*.jpg
+static/upload/*.JPG
+static/upload/*.jpeg
+static/upload/*.JPEG
+static/upload/*.png
+static/upload/*.PNG
+!static/upload/leaf.png
+!static/upload/leaf1.png
+!static/upload/leaf2.png
+!static/upload/leaf3.png
+

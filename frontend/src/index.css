@@ -51,10 +51,10 @@
   }
 
   .dark {
-    --bg-color: #0B1120;
-    --surface-color: #111827;
-    --text-color: #E5E7EB;
-    --border-color: #1F2937;
+    --bg-color: #09090b; /* Deep graphite */
+    --surface-color: #121214; /* Slightly raised surface */
+    --text-color: #ededed;
+    --border-color: #27272a;
   }
 
   body {
@@ -63,43 +63,57 @@
     background-color: var(--bg-color);
     color: var(--text-color);
     transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Apple system font stack for a premium feel if Inter isn't loaded */
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    perspective: 1000px;
   }
 }
 
 h1, h2, h3, h4, .font-heading {
-  font-family: var(--font-heading);
-  letter-spacing: -0.01em;
-  font-weight: 700;
+  font-family: "Geist", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
 }
 
 /* Modern Utilities */
 @layer utilities {
   .card-clean {
-    @apply bg-white dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/60 rounded-[2rem] shadow-soft transition-all duration-300;
+    @apply bg-white dark:bg-[#121214]/80 backdrop-blur-3xl border border-gray-100 dark:border-white/[0.05] rounded-3xl transition-all duration-500 ease-out;
+    box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .card-clean {
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .card-hover {
-    @apply hover:shadow-clinical hover:border-teal-200/50 dark:hover:border-teal-800/40 hover:-translate-y-1;
+    @apply hover:border-teal-500/30 dark:hover:border-emerald-500/30;
+    transform: translateZ(20px);
+  }
+
+  .card-3d-wrapper {
+    transform-style: preserve-3d;
+    perspective: 1000px;
   }
 
   .btn-professional {
-    @apply px-8 py-4 rounded-2xl font-bold tracking-tight transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none text-sm uppercase tracking-[0.1em];
+    @apply px-6 py-3 rounded-xl font-medium tracking-wide transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none text-sm;
   }
 
   .btn-primary {
-    @apply px-8 py-4 rounded-2xl font-bold tracking-tight transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none text-sm uppercase tracking-[0.1em] bg-teal-700 dark:bg-teal-500 hover:bg-teal-800 dark:hover:bg-teal-400 text-white shadow-xl shadow-teal-900/10;
+    @apply px-6 py-3 rounded-xl font-medium tracking-wide transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none text-sm bg-zinc-900 dark:bg-white text-white dark:text-black shadow-lg hover:shadow-xl hover:-translate-y-0.5;
   }
 
   .btn-secondary {
-    @apply px-8 py-4 rounded-2xl font-bold tracking-tight transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none text-sm uppercase tracking-[0.1em] bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 shadow-sm;
+    @apply px-6 py-3 rounded-xl font-medium tracking-wide transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none text-sm bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 shadow-sm;
   }
 
   .glass-minimal {
-    @apply bg-white/80 dark:bg-gray-950/80 backdrop-blur-2xl border-b border-gray-100/50 dark:border-gray-800/50;
+    @apply bg-white/70 dark:bg-[#09090b]/70 backdrop-blur-2xl border-b border-black/5 dark:border-white/[0.05];
   }
 
   .page-container {
-    @apply max-w-7xl mx-auto px-6 py-20 md:py-28;
+    @apply max-w-6xl mx-auto px-6 py-16 md:py-24;
   }
 
   .input-professional {

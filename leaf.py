@@ -2,435 +2,713 @@
 from flask import Flask, request, jsonify
 import numpy as np
 import os
+import time
+import hashlib
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.models import load_model
+from tensorflow.keras.applications.efficientnet import preprocess_input
 from flask_cors import CORS
 from deep_translator import GoogleTranslator
+import json
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
-from rag_engine import rag_engine # Import our RAG engine
+from rag_engine import rag_engine
+
+from quality_filter import check_image_quality
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app) # Allow all routes for development
+CORS(app)
 
-# Load environment variables
+response_cache = {}
+
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model_gemini = genai.GenerativeModel('gemini-1.5-flash')
+    genai_client = genai.Client(api_key=GEMINI_API_KEY)
 else:
-    print("WARNING: GEMINI_API_KEY not found in environment variables. Chatbot will use fallback logic.")
-    model_gemini = None
+    print("WARNING: GEMINI_API_KEY not found. Fallback logic will be limited.")
+    genai_client = None
 
 def translate_text(text, target_lang='en'):
     if not text or target_lang == 'en':
         return text
     try:
-        translated = GoogleTranslator(source='auto', target=target_lang).translate(text)
-        return translated
+        return GoogleTranslator(source='auto', target=target_lang).translate(text)
     except Exception as e:
         print(f"Translation Error: {str(e)}")
         return text
 
 # Configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, 'model.h5')
+BINARY_MODEL_PATH = os.path.join(BASE_DIR, 'model_binary.h5')
+DISEASE_MODEL_PATH = os.path.join(BASE_DIR, 'model_disease.h5')
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static/upload')
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load model
-model = load_model(MODEL_PATH)
-print("Model Loaded Successfully")
+# Load Multi-Stage Models
+print("Loading Intelligent Pipeline Models...")
+try:
+    binary_model = load_model(BINARY_MODEL_PATH)
+    disease_model = load_model(DISEASE_MODEL_PATH)
+    print("Multi-Stage Models Loaded Successfully.")
+except Exception as e:
+    print(f"Error loading models: {e}")
+    binary_model, disease_model = None, None
 
-# Disease Information Mapping (Shortened for brevity here, but keep full version in file)
-# ... [Keeping the full DISEASE_INFO as it is used for local mapping] ...
+try:
+    from generated_disease_info_v2 import DISEASE_INFO
+except ImportError:
+    DISEASE_INFO = {}
 
-DISEASE_INFO = {
-    0: {
-        "name": "Bacteria Spot Disease",
-        "description": "Bacterial spot is caused by Xanthomonas bacteria. It appears as small, water-soaked spots on leaves which later turn brown and necrotic.",
-        "treatment": "Use copper-based fungicides. Ensure seeds are disease-free. Avoid overhead irrigation.",
-        "prevention": "Rotate crops every 2-3 years. Remove plant debris after harvest. Use resistant varieties.",
-        "severity": "Medium"
-    },
-    1: {
-        "name": "Early Blight Disease",
-        "description": "Early blight is caused by the fungus Alternaria solani. It produces target-like spots on older leaves.",
-        "treatment": "Apply fungicides like Chlorothalonil or copper-based sprays. Remove infected lower leaves.",
-        "prevention": "Keep foliage dry. Space plants for good airflow. Mulch around the base.",
-        "severity": "High"
-    },
-    2: {
-        "name": "Healthy and Fresh",
-        "description": "The plant appears healthy with no visible signs of disease or pest infestation.",
-        "treatment": "Continue regular maintenance, watering, and nutrient application.",
-        "prevention": "Maintain good hygiene and monitor regularly for early signs of issues.",
-        "severity": "Low"
-    },
-    3: {
-        "name": "Late Blight Disease",
-        "description": "Late blight is a serious disease caused by Phytophthora infestans. It can rapidly destroy entire crops.",
-        "treatment": "Immediate application of specialized fungicides. Remove and destroy infected plants immediately.",
-        "prevention": "Plant resistant varieties. Avoid planting near potatoes. Ensure good drainage.",
-        "severity": "Critical"
-    },
-    4: {
-        "name": "Leaf Mold Disease",
-        "description": "Leaf mold is caused by Passalora fulva. It typically develops in high humidity environments.",
-        "treatment": "Improve greenhouse ventilation. Use fungicides if infestation is severe.",
-        "prevention": "Reduce humidity. Prune for better airflow. Use resistant cultivars.",
-        "severity": "Medium"
-    },
-    5: {
-        "name": "Septoria Leaf Spot Disease",
-        "description": "Septoria leaf spot is caused by Septoria lycopersici. Small, circular spots with gray centers appear on leaves.",
-        "treatment": "Apply fungicides containing copper or chlorothalonil. Remove affected leaves.",
-        "prevention": "Avoid overhead watering. Rotate crops. Keep the garden free of weeds.",
-        "severity": "Medium"
-    },
-    6: {
-        "name": "Target Spot Disease",
-        "description": "Target spot is caused by Corynespora cassiicola. It shows as circular brown spots with concentric rings.",
-        "treatment": "Spray with fungicides such as azoxystrobin or chlorothalonil.",
-        "prevention": "Improve airflow. Avoid excessively long periods of leaf wetness.",
-        "severity": "Medium"
-    },
-    7: {
-        "name": "Leaf Curl Virus Disease",
-        "description": "TYLCV is a viral disease transmitted by silverleaf whiteflies. It causes yellowing and upward curling of leaves.",
-        "treatment": "Primarily involves controlling the whitefly population. No cure for existing virus.",
-        "prevention": "Use insect-proof netting. Plant resistant varieties. Control weeds.",
-        "severity": "High"
-    },
-    8: {
-        "name": "Mosaic Virus Disease",
-        "description": "ToMV causes mottling and discoloration of leaves, often in a mosaic pattern.",
-        "treatment": "No cure. Remove and destroy infected plants to prevent spread.",
-        "prevention": "Sanitize tools. Avoid touching plants after using tobacco. Control weeds.",
-        "severity": "High"
-    },
-    9: {
-        "name": "Two Spotted Spider Mite Disease",
-        "description": "Spider mites are tiny pests that suck juices from leaves, causing yellow stippling and webbing.",
-        "treatment": "Use insecticidal soap or neem oil. Introduce natural predators like ladybugs.",
-        "prevention": "Keep plants well-hydrated. Mist leaves in hot, dry weather to discourage mites.",
-        "severity": "Medium"
-    }
-}
-
-from tensorflow.keras.applications.resnet50 import preprocess_input
-
-def get_prediction(image_path):
+def get_multi_stage_prediction(image_path):
+    """
+    Executes the multi-stage pipeline:
+    1. Binary Check
+    2. Disease Classification (if diseased)
+    """
     test_image = load_img(image_path, target_size=(224, 224))
     test_image = img_to_array(test_image)
     test_image = preprocess_input(test_image)
     test_image = np.expand_dims(test_image, axis=0)
     
-    predictions = model.predict(test_image)[0]
-    
-    # Get top prediction only
-    top_idx = np.argmax(predictions)
-    confidence = float(predictions[top_idx])
-    info = DISEASE_INFO.get(top_idx, {})
-    
-    name = info.get("name", "Unknown")
-    
-    if confidence < 0.6:
-        name = "Uncertain / Unrecognized Pathogen"
+    # Stage 2: Binary Healthy vs Diseased
+    binary_pred = binary_model.predict(test_image)[0][0]
+    # class mode binary sorted alphabetically: diseased (0), healthy (1)
+    if binary_pred > 0.5:
+        return {"stage": "binary", "diagnosis": "Healthy", "confidence": float(binary_pred)}
         
-    return {
-        "id": int(top_idx),
-        "name": name,
-        "confidence": confidence,
-        "description": info.get("description", ""),
-        "treatment": info.get("treatment", ""),
-        "prevention": info.get("prevention", ""),
-        "severity": info.get("severity", "Medium")
-    }
-
-@app.route("/api/health", methods=['GET'])
-def health_check():
-    return jsonify({
-        "status": "online",
-        "model_loaded": model is not None,
-        "classes": len(DISEASE_INFO)
-    })
+    # Stage 3: Pure Disease Classification
+    disease_preds = disease_model.predict(test_image)[0]
+    
+    # Stage 4: Confidence Calibration (Top-3 Sorting)
+    top_3_indices = np.argsort(disease_preds)[::-1][:3]
+    top_3_results = []
+    
+    for idx in top_3_indices:
+        # Avoid index out of bounds if info mapping changed
+        if idx in DISEASE_INFO:
+            top_3_results.append({
+                "id": int(idx),
+                "name": DISEASE_INFO[idx].get("name", "Unknown"),
+                "confidence": float(disease_preds[idx]),
+                "info": DISEASE_INFO[idx]
+            })
+    
+    return {"stage": "disease", "top_3": top_3_results}
 
 @app.route("/api/diagnose", methods=['POST'])
 def diagnose():
+    start_time = time.time()
     try:
-        # 1. Parse Inputs
         image_file = request.files.get('image')
         description = request.form.get('description', '').strip()
         lang = request.form.get('language', 'en')
         
-        # Clinical Debug Logs
-        print("--- Diagnosis Request ---")
-        print("Image Specimen:", image_file.filename if image_file else "None")
-        print("Symptom Description:", description if description else "None")
-        print("Target Language:", lang)
-        
-        if not description and not image_file:
-            return jsonify({"error": "No input provided. Please upload an image or describe symptoms."}), 400
+        if not image_file:
+            return jsonify({"error": "No image provided. Please upload a leaf image."}), 400
 
-        print(f"DEBUG: Processing diagnosis for Description: '{description}'")
-        prediction_result = None
-        image_url = None
+        filename = image_file.filename
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        image_file.save(file_path)
+        image_url = f"/static/upload/{filename}"
         
-        # 2. Handle Image Prediction
-        if image_file:
-            filename = image_file.filename
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            image_file.save(file_path)
-            image_url = f"/static/upload/{filename}"
-            prediction_result = get_prediction(file_path)
+        # Stage 1: Leaf Quality Filter
+        is_good, quality_reason = check_image_quality(file_path)
+        if not is_good:
+            return jsonify({"error": quality_reason}), 400
+
+        # Execute Pipeline
+        prediction_result = get_multi_stage_prediction(file_path)
+        
+        # Binary Early Exit (Healthy)
+        if prediction_result["stage"] == "binary" and prediction_result["diagnosis"] == "Healthy":
+            final_diagnosis = {
+                "disease": "Healthy Plant",
+                "confidence": f"{prediction_result['confidence']*100:.0f}%",
+                "cause": "No disease detected. Plant appears healthy.",
+                "treatment": "No treatment required. Continue regular maintenance.",
+                "prevention": "Maintain good hygiene and monitor regularly."
+            }
+            return generate_final_response(final_diagnosis, lang, image_url)
             
-            # Short-circuit for healthy plant
-            if prediction_result and prediction_result.get('id') == 2:
-                final_diagnosis = {
-                    "disease": "Healthy Plant",
-                    "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%",
-                    "cause": "No disease detected. Plant appears healthy and fresh.",
-                    "treatment": "No treatment required. Continue regular maintenance.",
-                    "prevention": "Maintain good hygiene and monitor regularly for early signs of issues."
-                }
-                
-                # Translate Final Result
-                if lang != 'en':
-                    for key in final_diagnosis:
-                        if key != 'confidence':
-                            final_diagnosis[key] = translate_text(final_diagnosis[key], lang)
-                
-                prediction_shim = {
-                    "name": final_diagnosis.get("disease"),
-                    "severity": "Low",
-                    "description": final_diagnosis.get("cause"),
-                    "treatment": final_diagnosis.get("treatment"),
-                    "prevention": final_diagnosis.get("prevention")
-                }
-                
-                return jsonify({
-                    "status": "success",
-                    "diagnosis": final_diagnosis,
-                    "prediction": prediction_shim,
-                    "imageUrl": image_url
-                })
-
-        # 3. Handle Text/Context Retrieval (RAG)
-        # Combine user description with model prediction for better retrieval
-        query_for_rag = description
-        if not query_for_rag and prediction_result:
-            query_for_rag = prediction_result.get('name', '')
+        # Disease Fallback to LLM Strategy
+        top_3 = prediction_result["top_3"]
+        top_1 = top_3[0]
+        
+        # If very confident, return the top-1 directly without confusing the user
+        if top_1["confidence"] >= 0.70:
+            final_diagnosis = {
+                "disease": top_1["name"],
+                "confidence": f"{top_1['confidence']*100:.0f}%",
+                "cause": top_1["info"].get("description", ""),
+                "treatment": top_1["info"].get("treatment", ""),
+                "prevention": top_1["info"].get("prevention", "")
+            }
+            return generate_final_response(final_diagnosis, lang, image_url)
             
-        # Translate query to English for better RAG accuracy
-        query_for_rag_en = translate_text(query_for_rag, 'en') if lang != 'en' else query_for_rag
+        # Stage 5: Hybrid Intelligent Decision System
+        # Confident < 70%, silently use LLM to choose ONE definitive diagnosis
+        query_for_rag = f"{top_1['name']} or {top_3[1]['name']}"
+        retrieved_context = rag_engine.retrieve_context(query_for_rag, k=2)
         
-        print(f"DEBUG: RAG Query (EN): {query_for_rag_en}")
-        retrieved_context = rag_engine.retrieve_context(query_for_rag_en or "", k=3)
+        top_3_str = ", ".join([f"{p['name']} ({p['confidence']*100:.0f}%)" for p in top_3])
         
-        print(f"DEBUG: Retrieved Context: {retrieved_context[:200]}...") # Log first 200 chars
-        
-        if not retrieved_context or "No local knowledge available" in retrieved_context:
-            print("WARNING: Retrieval returned empty or default context. Using general knowledge fallback.")
-            retrieved_context = "Knowledge base search did not yield specific local results for this query. Fallback to general plant pathology knowledge: Fungal infections often present as spots or wilting, while viruses cause curling and mosaic patterns. Pests like mites cause stippling and webbing."
-
         system_prompt = (
-            "You are an expert plant pathologist. Provide a precise diagnostic report."
-            "Identify the MOST LIKELY disease based on the data."
-            "NEVER return 'Unknown condition' if there are symptoms."
+            "You are an expert plant pathologist AI. The image CNN is uncertain. "
+            "You MUST output exactly ONE definitive disease diagnosis. Do not output a list of probabilities. "
+            "If you cannot decide, pick the most likely one based on symptoms."
         )
-        
         prompt = f"""
         {system_prompt}
         
-        INPUTS:
-        - ML Prediction: {prediction_result.get('name') if prediction_result else 'None'} ({prediction_result.get('confidence', 0) if prediction_result else 0.0:.2f})
-        - Symptoms: {description if description else 'None'}
-        - Context: {retrieved_context}
+        CNN Top-3 Guesses: {top_3_str}
+        User Symptoms: {description if description else 'None provided'}
+        Knowledge Base: {retrieved_context}
         
         OUTPUT FORMAT (STRICT JSON):
         {{
-          "disease": "Disease Name",
-          "confidence": "Estimation (e.g., 90%)",
-          "cause": "Specific cause",
+          "disease": "Definitive Disease Name",
+          "confidence": "Estimation (e.g., 65%)",
+          "cause": "Specific cause description",
           "treatment": "Direct treatment steps",
           "prevention": "Prevention measures"
         }}
         """
-
-        final_diagnosis = {}
-        if model_gemini:
-            print("Initiating Gemini LLM analysis (15s Threaded Timeout)...")
+        
+        print(f"Calling LLM for Hybrid Decision (Confidence: {top_1['confidence']:.2f})...")
+        try:
+            import concurrent.futures
             
-            import threading
-            import json
+            def call_llm():
+                return genai_client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt
+                )
             
-            llm_result = {"data": None, "error": None}
-            
-            def run_gemini():
-                try:
-                    # Attempt the call
-                    response = model_gemini.generate_content(prompt)
-                    llm_result["data"] = response.text
-                except Exception as e:
-                    llm_result["error"] = str(e)
-            
-            llm_thread = threading.Thread(target=run_gemini)
-            llm_thread.start()
-            llm_thread.join(timeout=20)
-            
-            if llm_thread.is_alive():
-                print("Gemini call timed out after 20 seconds. Switching to local fallback.")
-                # We don't need to kill the thread, just proceed. It will finish or die with the process.
-            
-            if llm_result["data"]:
-                try:
-                    text = llm_result["data"]
-                    if "```json" in text:
-                        text = text.split("```json")[1].split("```")[0].strip()
-                    elif "```" in text:
-                        text = text.split("```")[1].split("```")[0].strip()
-                    final_diagnosis = json.loads(text)
-                    
-                    # Safety check for 'Unknown' in response
-                    if "unknown" in str(final_diagnosis.get("disease", "")).lower():
-                         print("LLM returned 'Unknown' - forcing local prediction fallback.")
-                         final_diagnosis["disease"] = prediction_result.get('name') if prediction_result else "General Plant Pathogen"
-
-                    print("Gemini report generated successfully.")
-                except Exception as parse_err:
-                    print(f"LLM Parse Error: {parse_err}")
-            
-            # If still empty or timed out, use fallback
-            if not final_diagnosis:
-                print("Using local RAG-enhanced fallback due to LLM failure.")
-                # Try to extract a name from retrieved_context if possible
-                fallback_disease = "General Plant Pathology Analysis"
-                if prediction_result:
-                    fallback_disease = prediction_result.get('name', 'General Plant Pathogen')
-                elif "Disease: " in retrieved_context:
-                    try:
-                        fallback_disease = retrieved_context.split("Disease: ")[1].split("\n")[0].strip()
-                    except: pass
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(call_llm)
+                # Hard timeout of 8 seconds for the LLM to prevent hanging
+                response = future.result(timeout=8)
                 
-                if "unknown" in str(fallback_disease).lower():
-                    fallback_disease = "General Plant Pathology Analysis"
-
-                final_diagnosis = {
-                    "disease": fallback_disease,
-                    "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%" if prediction_result else "60%",
-                    "cause": prediction_result.get('description', 'Pathogen identified through symptom pattern analysis.') if prediction_result else "Symptoms and local context suggest a specific pathogen.",
-                    "treatment": prediction_result.get('treatment', 'Apply organic fungicides/pesticides immediately.') if prediction_result else "Apply organic fungicides/pesticides immediately.",
-                    "prevention": prediction_result.get('prevention', 'Improve airflow and maintain consistent watering.') if prediction_result else "Improve airflow and maintain consistent watering."
-                }
-        else:
-            # No Gemini - Fallback to ML Model and RAG
-            fallback_disease = "General Pathogen Analysis"
-            if prediction_result:
-                fallback_disease = prediction_result.get('name', 'General Pathogen')
-            elif "Disease: " in retrieved_context:
-                try:
-                    fallback_disease = retrieved_context.split("Disease: ")[1].split("\n")[0].strip()
-                except: pass
-
+            print("LLM generated response successfully.")
+            result_text = response.text.replace("```json", "").replace("```", "").strip()
+            final_diagnosis = json.loads(result_text)
+        except concurrent.futures.TimeoutError:
+            print("LLM Request timed out! Falling back to CNN.")
             final_diagnosis = {
-                "disease": fallback_disease,
-                "confidence": f"{prediction_result.get('confidence', 0)*100:.0f}%" if prediction_result else "65%",
-                "cause": prediction_result.get('description', 'Pathogen identified through symptom pattern analysis.') if prediction_result else "Symptom patterns indicate a potential plant pathology.",
-                "treatment": prediction_result.get('treatment', 'Remove infected leaves and apply organic fungicide.') if prediction_result else "Immediate pruning of affected areas and application of organic neem oil or copper spray recommended.",
-                "prevention": prediction_result.get('prevention', 'Ensure proper soil health and crop rotation.') if prediction_result else "Improve spacing for airflow, avoid overhead watering, and maintain clean gardening tools."
+                "disease": top_1["name"],
+                "confidence": f"{top_1['confidence']*100:.0f}%",
+                "cause": top_1["info"].get("description", ""),
+                "treatment": top_1["info"].get("treatment", ""),
+                "prevention": top_1["info"].get("prevention", "")
             }
-
-        # 5. Translate Final Result
-        if lang != 'en':
-            for key in final_diagnosis:
-                final_diagnosis[key] = translate_text(final_diagnosis[key], lang)
-
-        # Compatibility Shim for HistoryPanel (expects 'prediction' object)
-        prediction_shim = {
-            "name": final_diagnosis.get("disease", "General Plant Pathology"),
-            "severity": "High" if "Critical" in str(final_diagnosis) else "Medium",
-            "description": final_diagnosis.get("cause", "N/A"),
-            "treatment": final_diagnosis.get("treatment", "N/A"),
-            "prevention": final_diagnosis.get("prevention", "N/A")
-        }
-
-        return jsonify({
-            "status": "success",
-            "diagnosis": final_diagnosis,
-            "prediction": prediction_shim, # Required for HistoryPanel compatibility
-            "imageUrl": image_url or "/static/upload/leaf3.png" # Fallback to prevent crash
-        })
+        except Exception as e:
+            print(f"LLM Error: {e}. Falling back to CNN.")
+            # Absolute fallback if LLM fails
+            final_diagnosis = {
+                "disease": top_1["name"],
+                "confidence": f"{top_1['confidence']*100:.0f}%",
+                "cause": top_1["info"].get("description", ""),
+                "treatment": top_1["info"].get("treatment", ""),
+                "prevention": top_1["info"].get("prevention", "")
+            }
+            
+        return generate_final_response(final_diagnosis, lang, image_url)
 
     except Exception as e:
         import traceback
-        err_msg = f"Diagnosis failure: {str(e)}"
-        print(f"ERROR: {err_msg}")
-        print(traceback.format_exc())
-        return jsonify({
-            "error": "Analysis engine encountered an internal error.",
-            "details": str(e),
-            "traceback": traceback.format_exc()
-        }), 500
+        traceback.print_exc()
+        return jsonify({"error": f"Diagnosis failed: {str(e)}"}), 500
 
-@app.route("/api/translate", methods=['POST'])
-def translate_endpoint():
-    data = request.json
-    if not data or 'texts' not in data or 'target' not in data:
-        return jsonify({"error": "Invalid request. Provide 'texts' object and 'target' language."}), 400
+def generate_final_response(final_diagnosis, lang, image_url):
+    # Translate Final Result
+    if lang != 'en':
+        for key in final_diagnosis:
+            if key != 'confidence':
+                final_diagnosis[key] = translate_text(final_diagnosis[key], lang)
     
-    texts = data['texts']
-    target = data['target']
+    prediction_shim = {
+        "name": final_diagnosis.get("disease"),
+        "severity": "Medium",
+        "description": final_diagnosis.get("cause"),
+        "treatment": final_diagnosis.get("treatment"),
+        "prevention": final_diagnosis.get("prevention")
+    }
     
-    translated_texts = {}
-    for key, text in texts.items():
-        if key == 'confidence' or not isinstance(text, str):
-            translated_texts[key] = text
-        else:
-            translated_texts[key] = translate_text(text, target)
-            
     return jsonify({
         "status": "success",
-        "translated": translated_texts,
-        "target": target
+        "diagnosis": final_diagnosis,
+        "prediction": prediction_shim,
+        "imageUrl": image_url
     })
 
-import socket
-
-def find_free_port():
-    """Finds an available port if the default is busy."""
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', 0))
-    port = s.getsockname()[1]
-    s.close()
-    return port
-
-def kill_existing_process_on_port(port):
-    """Kills any process currently running on the specified port."""
+@app.route("/api/translate", methods=['POST'])
+def translate():
     try:
-        print(f"Cleaning up port {port}...")
-        os.system(f"lsof -ti:{port} | xargs kill -9 > /dev/null 2>&1")
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        texts = data.get('texts')
+        target = data.get('target', 'en')
+        
+        if not texts:
+            return jsonify({"error": "No texts provided"}), 400
+            
+        if isinstance(texts, dict):
+            translated = {}
+            for k, v in texts.items():
+                if k != 'confidence':
+                    translated[k] = translate_text(v, target)
+                else:
+                    translated[k] = v
+        elif isinstance(texts, list):
+            translated = [translate_text(t, target) for t in texts]
+        else:
+            translated = translate_text(texts, target)
+            
+        return jsonify({
+            "status": "success",
+            "translated": translated
+        })
     except Exception as e:
-        print(f"Cleanup error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def generate_single_report_pdf(data):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    import time
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    primary_color = colors.HexColor("#0f766e")  # Teal 700
+    text_color = colors.HexColor("#1f2937")     # Gray 800
+    bg_light = colors.HexColor("#f3f4f6")       # Gray 100
+    border_color = colors.HexColor("#e5e7eb")   # Gray 200
+    
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=22,
+        leading=26,
+        textColor=primary_color,
+        spaceAfter=15
+    )
+    
+    h2_style = ParagraphStyle(
+        'H2',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=13,
+        leading=16,
+        textColor=primary_color,
+        spaceBefore=12,
+        spaceAfter=6
+    )
+    
+    body_style = ParagraphStyle(
+        'Body',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9.5,
+        leading=13.5,
+        textColor=text_color,
+        spaceAfter=8
+    )
+    
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor("#4b5563")
+    )
+    
+    story = []
+    
+    story.append(Paragraph("AgriGuard AI — Case Diagnosis Report", title_style))
+    story.append(Table([[""]], colWidths=[532], rowHeights=[2], style=TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), primary_color),
+        ('PADDING', (0,0), (-1,-1), 0),
+    ])))
+    story.append(Spacer(1, 15))
+    
+    diagnosis = data.get('diagnosis', {})
+    disease_name = diagnosis.get('disease', 'Unknown Specimen')
+    confidence = diagnosis.get('confidence', 'N/A')
+    cause = diagnosis.get('cause', 'N/A')
+    treatment = diagnosis.get('treatment', 'N/A')
+    prevention = diagnosis.get('prevention', 'N/A')
+    image_url = data.get('imageUrl', '')
+    
+    date_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    report_id = f"AGR-{int(time.time())}"
+    
+    meta_data = [
+        [Paragraph(f"<b>Date Generated:</b> {date_str}", meta_style), Paragraph(f"<b>Report ID:</b> {report_id}", meta_style)],
+        [Paragraph(f"<b>Specimen Diagnosis:</b> {disease_name}", meta_style), Paragraph(f"<b>System Confidence:</b> {confidence}", meta_style)]
+    ]
+    meta_table = Table(meta_data, colWidths=[266, 266])
+    meta_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), bg_light),
+        ('BOX', (0,0), (-1,-1), 1, border_color),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 15))
+    
+    image_element = None
+    if image_url:
+        local_path = os.path.join(BASE_DIR, image_url.lstrip('/'))
+        if os.path.exists(local_path):
+            try:
+                image_element = Image(local_path, width=240, height=180)
+            except Exception as e:
+                print(f"Error loading image {local_path}: {e}")
+                
+    if image_element:
+        right_p = [
+            Paragraph("DIAGNOSTIC INSIGHTS", h2_style),
+            Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')),
+            Spacer(1, 8),
+            Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')),
+            Paragraph(cause, body_style)
+        ]
+        main_table = Table([[image_element, right_p]], colWidths=[240, 292])
+        main_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('PADDING', (0,0), (-1,-1), 0),
+        ]))
+        story.append(main_table)
+    else:
+        story.append(Paragraph("DIAGNOSTIC INSIGHTS", h2_style))
+        story.append(Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')))
+        story.append(Spacer(1, 8))
+        story.append(Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')))
+        story.append(Paragraph(cause, body_style))
+        
+    story.append(Spacer(1, 15))
+    
+    story.append(Paragraph("RECOVERY & SHIELD PROTOCOLS", h2_style))
+    story.append(Table([[
+        Paragraph("<b>Recovery Treatment Steps:</b>", ParagraphStyle('Sub', parent=body_style, fontName='Helvetica-Bold')),
+        Paragraph("<b>Prevention Shield Measures:</b>", ParagraphStyle('Sub', parent=body_style, fontName='Helvetica-Bold'))
+    ]], colWidths=[260, 260], style=TableStyle([('PADDING', (0,0), (-1,-1), 0)])))
+    story.append(Spacer(1, 4))
+    
+    proto_table = Table([[
+        Paragraph(treatment, body_style),
+        Paragraph(prevention, body_style)
+    ]], colWidths=[250, 250])
+    proto_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (0,0), colors.HexColor("#f0fdf4")),
+        ('BACKGROUND', (1,0), (1,0), colors.HexColor("#f8fafc")),
+        ('BOX', (0,0), (0,0), 1, colors.HexColor("#bbf7d0")),
+        ('BOX', (1,0), (1,0), 1, colors.HexColor("#e2e8f0")),
+        ('PADDING', (0,0), (-1,-1), 10),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+    ]))
+    story.append(proto_table)
+    
+    story.append(Spacer(1, 20))
+    story.append(Table([[""]], colWidths=[532], rowHeights=[1], style=TableStyle([('BACKGROUND', (0,0), (-1,-1), border_color)])))
+    story.append(Spacer(1, 8))
+    
+    disclaimer_style = ParagraphStyle(
+        'Disclaimer',
+        parent=styles['Normal'],
+        fontName='Helvetica-Oblique',
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#9ca3af"),
+        alignment=1
+    )
+    story.append(Paragraph("This report was automatically generated by the AgriGuard AI Plant Pathology System. Consult certified crop pathologists or extension offices for critical crop management decisions.", disclaimer_style))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+def generate_vault_report_pdf(items):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    import os
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    primary_color = colors.HexColor("#0f766e")  # Teal 700
+    text_color = colors.HexColor("#1f2937")     # Gray 800
+    bg_light = colors.HexColor("#f3f4f6")       # Gray 100
+    border_color = colors.HexColor("#e5e7eb")   # Gray 200
+    
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=22,
+        leading=26,
+        textColor=primary_color,
+        spaceAfter=15
+    )
+    
+    h2_style = ParagraphStyle(
+        'H2',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=13,
+        leading=16,
+        textColor=primary_color,
+        spaceBefore=12,
+        spaceAfter=6
+    )
+    
+    body_style = ParagraphStyle(
+        'Body',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9.5,
+        leading=13.5,
+        textColor=text_color,
+        spaceAfter=8
+    )
+    
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor("#4b5563")
+    )
+    
+    disclaimer_style = ParagraphStyle(
+        'Disclaimer',
+        parent=styles['Normal'],
+        fontName='Helvetica-Oblique',
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#9ca3af"),
+        alignment=1
+    )
+    
+    story = []
+    
+    story.append(Paragraph("AgriGuard AI — Crop Diagnosis Vault", title_style))
+    story.append(Table([[""]], colWidths=[532], rowHeights=[2], style=TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), primary_color),
+        ('PADDING', (0,0), (-1,-1), 0),
+    ])))
+    story.append(Spacer(1, 20))
+    
+    story.append(Paragraph("<b>VAULT EXPORT SUMMARY</b>", h2_style))
+    story.append(Paragraph(f"This document represents a comprehensive historical export of the diagnosis vault containing <b>{len(items)} scanned specimens</b>. Below is the historical checklist.", body_style))
+    story.append(Spacer(1, 10))
+    
+    checklist_data = [["No.", "Specimen / Diagnosis", "Severity", "Scan Date"]]
+    for idx, item in enumerate(items):
+        res = item.get('result', {})
+        diag = res.get('diagnosis', {})
+        disease_name = diag.get('disease', 'Unknown')
+        severity = res.get('prediction', {}).get('severity', 'Medium')
+        timestamp = item.get('timestamp', 'N/A').split(',')[0]
+        checklist_data.append([str(idx + 1), disease_name, severity, timestamp])
+        
+    checklist_table = Table(checklist_data, colWidths=[40, 262, 100, 130])
+    checklist_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), primary_color),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('GRID', (0,0), (-1,-1), 0.5, border_color),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+    ]))
+    story.append(checklist_table)
+    
+    story.append(Spacer(1, 30))
+    story.append(Paragraph("<i>Detailed case diagnostic reports follow on the subsequent pages.</i>", ParagraphStyle('CenterDisc', parent=body_style, fontName='Helvetica-Oblique', alignment=1, textColor=colors.HexColor("#6b7280"))))
+    
+    for idx, item in enumerate(items):
+        story.append(PageBreak())
+        
+        res = item.get('result', {})
+        diagnosis = res.get('diagnosis', {})
+        disease_name = diagnosis.get('disease', 'Unknown Specimen')
+        confidence = diagnosis.get('confidence', 'N/A')
+        cause = diagnosis.get('cause', 'N/A')
+        treatment = diagnosis.get('treatment', 'N/A')
+        prevention = diagnosis.get('prevention', 'N/A')
+        image_url = res.get('imageUrl', '')
+        timestamp = item.get('timestamp', 'N/A')
+        
+        story.append(Paragraph(f"Case Report #{idx + 1} — {disease_name}", title_style))
+        story.append(Table([[""]], colWidths=[532], rowHeights=[2], style=TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), primary_color),
+            ('PADDING', (0,0), (-1,-1), 0),
+        ])))
+        story.append(Spacer(1, 15))
+        
+        meta_data = [
+            [Paragraph(f"<b>Scan Date:</b> {timestamp}", meta_style), Paragraph(f"<b>Case ID:</b> AGR-VLT-{item.get('id', idx)}", meta_style)],
+            [Paragraph(f"<b>Diagnosis Status:</b> {disease_name}", meta_style), Paragraph(f"<b>System Confidence:</b> {confidence}", meta_style)]
+        ]
+        meta_table = Table(meta_data, colWidths=[266, 266])
+        meta_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), bg_light),
+            ('BOX', (0,0), (-1,-1), 1, border_color),
+            ('PADDING', (0,0), (-1,-1), 8),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(meta_table)
+        story.append(Spacer(1, 15))
+        
+        image_element = None
+        if image_url:
+            local_path = os.path.join(BASE_DIR, image_url.lstrip('/'))
+            if os.path.exists(local_path):
+                try:
+                    image_element = Image(local_path, width=240, height=180)
+                except Exception as e:
+                    print(f"Error loading image {local_path}: {e}")
+                    
+        if image_element:
+            right_p = [
+                Paragraph("DIAGNOSTIC INSIGHTS", h2_style),
+                Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')),
+                Spacer(1, 8),
+                Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')),
+                Paragraph(cause, body_style)
+            ]
+            main_table = Table([[image_element, right_p]], colWidths=[240, 292])
+            main_table.setStyle(TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('PADDING', (0,0), (-1,-1), 0),
+            ]))
+            story.append(main_table)
+        else:
+            story.append(Paragraph("DIAGNOSTIC INSIGHTS", h2_style))
+            story.append(Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')))
+            story.append(Spacer(1, 8))
+            story.append(Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')))
+            story.append(Paragraph(cause, body_style))
+            
+        story.append(Spacer(1, 15))
+        
+        story.append(Paragraph("RECOVERY & SHIELD PROTOCOLS", h2_style))
+        story.append(Table([[
+            Paragraph("<b>Recovery Treatment Steps:</b>", ParagraphStyle('Sub', parent=body_style, fontName='Helvetica-Bold')),
+            Paragraph("<b>Prevention Shield Measures:</b>", ParagraphStyle('Sub', parent=body_style, fontName='Helvetica-Bold'))
+        ]], colWidths=[260, 260], style=TableStyle([('PADDING', (0,0), (-1,-1), 0)])))
+        story.append(Spacer(1, 4))
+        
+        proto_table = Table([[
+            Paragraph(treatment, body_style),
+            Paragraph(prevention, body_style)
+        ]], colWidths=[250, 250])
+        proto_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (0,0), colors.HexColor("#f0fdf4")),
+            ('BACKGROUND', (1,0), (1,0), colors.HexColor("#f8fafc")),
+            ('BOX', (0,0), (0,0), 1, colors.HexColor("#bbf7d0")),
+            ('BOX', (1,0), (1,0), 1, colors.HexColor("#e2e8f0")),
+            ('PADDING', (0,0), (-1,-1), 10),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+        story.append(proto_table)
+        
+        story.append(Spacer(1, 20))
+        story.append(Table([[""]], colWidths=[532], rowHeights=[1], style=TableStyle([('BACKGROUND', (0,0), (-1,-1), border_color)])))
+        story.append(Spacer(1, 8))
+        story.append(Paragraph("This report was automatically generated by the AgriGuard AI Plant Pathology System. Consult certified crop pathologists or extension offices for critical crop management decisions.", disclaimer_style))
+        
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+@app.route("/api/export/pdf", methods=['POST'])
+def export_pdf():
+    from flask import send_file
+    from io import BytesIO
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        pdf_bytes = generate_single_report_pdf(data)
+        
+        date_str = time.strftime("%Y_%m_%d")
+        filename = f"Agriguard_AI_Report_{date_str}.pdf"
+        
+        return send_file(
+            BytesIO(pdf_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Failed to generate report: {str(e)}"}), 500
+
+@app.route("/api/export/vault", methods=['POST'])
+def export_vault():
+    from flask import send_file
+    from io import BytesIO
+    try:
+        data = request.json
+        if not data or 'items' not in data:
+            return jsonify({"error": "No history items provided"}), 400
+            
+        items = data.get('items', [])
+        pdf_bytes = generate_vault_report_pdf(items)
+        
+        date_str = time.strftime("%Y_%m_%d")
+        filename = f"Agriguard_AI_Vault_Report_{date_str}.pdf"
+        
+        return send_file(
+            BytesIO(pdf_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Failed to generate vault report: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    # Get preferred port from environment or default to 8088
-    preferred_port = int(os.getenv("PORT", 8088))
-    
-    # Clean up any existing process on the preferred port
-    kill_existing_process_on_port(preferred_port)
-    
-    try:
-        print(f"Starting Intelligent Diagnosis Server on port {preferred_port}")
-        app.run(host='0.0.0.0', threaded=True, port=preferred_port, debug=True, use_reloader=False)
-    except OSError:
-        # If still busy, find any free port
-        free_port = find_free_port()
-        print(f"Port {preferred_port} busy. Falling back to dynamic port: {free_port}")
-        app.run(host='0.0.0.0', threaded=True, port=free_port, debug=True, use_reloader=False)
+    app.run(debug=True, port=8088, host='0.0.0.0')

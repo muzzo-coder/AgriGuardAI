@@ -21,29 +21,29 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass-minimal">
+    <header className="fixed top-0 left-0 right-0 z-50 glass-minimal border-b border-black/5 dark:border-white/5">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Branding */}
         <Link to="/" className="flex items-center gap-3 active:scale-95 transition-transform">
-          <div className="w-10 h-10 bg-teal-700 dark:bg-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-900/10">
+          <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
             <Leaf className="text-white w-5 h-5" />
           </div>
-          <span className="text-2xl font-black tracking-tight text-gray-900 dark:text-white font-heading">
-            AgriGuard<span className="text-teal-500">.</span>
+          <span className="text-2xl font-bold tracking-tighter text-zinc-900 dark:text-white font-heading">
+            AgriGuard<span className="text-emerald-500">.</span>
           </span>
         </Link>
         
-        {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-2 p-1.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-gray-100 dark:border-gray-800">
+        {/* Desktop Nav - Spatial Pill */}
+        <nav className="hidden lg:flex items-center gap-1 p-1 bg-white/50 dark:bg-[#121214]/60 backdrop-blur-xl rounded-2xl border border-black/5 dark:border-white/10 shadow-lg shadow-black/5">
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               className={({ isActive }) => 
-                `flex items-center gap-2 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.1em] transition-all rounded-xl ${
+                `flex items-center gap-2 px-6 py-2.5 text-xs font-semibold tracking-wide transition-all rounded-xl ${
                   isActive 
-                    ? 'text-teal-700 dark:text-teal-400 bg-white dark:bg-gray-900 shadow-sm border border-teal-100 dark:border-teal-800' 
-                    : 'text-gray-500 dark:text-gray-400 hover:text-teal-600'
+                    ? 'text-zinc-900 dark:text-white bg-zinc-100 dark:bg-white/10 shadow-sm' 
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-zinc-50 dark:hover:bg-white/5'
                 }`
               }
             >
@@ -56,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
         <div className="flex items-center gap-4">
 
           {/* Language Switcher */}
-          <div className="hidden md:flex items-center gap-1 p-1 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-800">
+          <div className="hidden md:flex items-center gap-1 p-1 bg-white/50 dark:bg-[#121214]/60 backdrop-blur-xl rounded-xl border border-black/5 dark:border-white/10">
             {['en', 'hi', 'mr'].map((lng) => (
               <button
                 key={lng}
@@ -64,10 +64,10 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
                   i18n.changeLanguage(lng);
                   localStorage.setItem('i18nextLng', lng);
                 }}
-                className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${
                   i18n.language.startsWith(lng)
-                    ? 'bg-white dark:bg-gray-900 text-teal-700 dark:text-teal-400 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                 }`}
               >
                 {lng}
@@ -75,21 +75,21 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
             ))}
           </div>
 
-          <div className="h-6 w-px bg-gray-200 dark:bg-gray-800 mx-1 hidden md:block"></div>
+          <div className="h-6 w-px bg-black/10 dark:bg-white/10 mx-1 hidden md:block"></div>
 
           {/* Theme Toggle */}
           <button 
             onClick={onToggleTheme}
-            className="p-3 bg-white dark:bg-gray-900 text-gray-500 hover:text-teal-600 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm transition-all active:scale-95 hidden sm:block"
+            className="p-3 bg-white/50 dark:bg-[#121214]/60 backdrop-blur-xl text-zinc-500 hover:text-emerald-500 border border-black/5 dark:border-white/10 rounded-xl shadow-sm transition-all active:scale-95 hidden sm:block"
             aria-label="Toggle Theme"
           >
-            {darkMode ? <Sun size={20} className="text-amber-500" /> : <Moon size={20} />}
+            {darkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} />}
           </button>
 
           {/* Mobile Menu Toggle */}
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-3 bg-white dark:bg-gray-900 text-gray-500 hover:text-teal-600 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm transition-all"
+            className="lg:hidden p-3 bg-white/50 dark:bg-[#121214]/60 backdrop-blur-xl text-zinc-500 hover:text-emerald-500 border border-black/5 dark:border-white/10 rounded-xl shadow-sm transition-all"
           >
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -103,7 +103,7 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="lg:hidden bg-white/95 dark:bg-gray-950/95 backdrop-blur-2xl border-b border-gray-100 dark:border-gray-800 absolute top-20 left-0 right-0 py-8 px-6 space-y-4 shadow-2xl"
+            className="lg:hidden bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-3xl border-b border-black/5 dark:border-white/10 absolute top-20 left-0 right-0 py-8 px-6 space-y-4 shadow-2xl"
           >
             <div className="grid grid-cols-1 gap-3">
               {navLinks.map((link) => (
@@ -112,10 +112,10 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
                   to={link.to}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) => 
-                    `flex items-center gap-5 p-5 text-sm font-black rounded-2xl transition-all ${
+                    `flex items-center gap-5 p-5 text-sm font-bold rounded-2xl transition-all ${
                       isActive 
-                        ? 'bg-teal-700 text-white shadow-lg shadow-teal-900/20' 
-                        : 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800'
+                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl' 
+                        : 'text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-[#121214] border border-black/5 dark:border-white/5'
                     }`
                   }
                 >
@@ -125,13 +125,13 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
               ))}
             </div>
             
-            <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center">
-               <span className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Appearance</span>
+            <div className="pt-6 mt-4 border-t border-black/5 dark:border-white/10 flex justify-between items-center">
+               <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Appearance</span>
                <button 
                 onClick={onToggleTheme} 
-                className="flex items-center gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-100 dark:border-gray-800 font-bold text-xs"
+                className="flex items-center gap-3 px-6 py-3 bg-zinc-50 dark:bg-[#121214] rounded-2xl border border-black/5 dark:border-white/5 font-bold text-xs"
                >
-                  {darkMode ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-teal-600" />}
+                  {darkMode ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-emerald-500" />}
                   {darkMode ? 'Light' : 'Dark'}
                </button>
             </div>

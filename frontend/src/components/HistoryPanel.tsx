@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, ChevronRight, Trash2, Download, Database } from 'lucide-react';
+import { Clock, ChevronRight, Trash2, Download, Database, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import api from '../api/axios';
 
 interface HistoryItem {
   id: number;
@@ -17,6 +18,24 @@ interface HistoryPanelProps {
 
 const HistoryPanel: React.FC<HistoryPanelProps> = ({ items, onSelect, onClear }) => {
   const { t } = useTranslation();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportVault = async () => {
+    try {
+      setIsExporting(true);
+      const response = await api.post('/api/export/vault', { items }, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `Agriguard_AI_Vault_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+    } catch (err) {
+      console.error("Failed to export vault data:", err);
+      alert("Failed to export vault report. Please try again later.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="card-clean p-8 h-fit shadow-clinical border-gray-100/50 dark:border-gray-800/30">
@@ -92,8 +111,21 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ items, onSelect, onClear })
 
       <div className="mt-10 pt-8 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-4">
         {items.length > 0 && (
-          <button className="btn-secondary w-full py-4 text-[10px] font-black uppercase tracking-[0.25em] flex items-center justify-center gap-3 rounded-2xl">
-            <Download size={14} /> {t('history_export_btn', { defaultValue: 'Export Vault Data' })}
+          <button 
+            onClick={handleExportVault}
+            disabled={isExporting}
+            className="btn-secondary w-full py-4 text-[10px] font-black uppercase tracking-[0.25em] flex items-center justify-center gap-3 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Exporting Vault...
+              </>
+            ) : (
+              <>
+                <Download size={14} /> {t('history_export_btn', { defaultValue: 'Export Vault Data' })}
+              </>
+            )}
           </button>
         )}
         <div className="flex items-start gap-4 px-3 opacity-60">

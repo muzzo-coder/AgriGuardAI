@@ -17,12 +17,15 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isCameraInitializing, setIsCameraInitializing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [processStep, setProcessStep] = useState(0); // 0: Uploading, 1: Analyzing, 2: Generating
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -60,6 +63,45 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
     }
   };
 
+  const compressImage = (file: File, maxWidth: number = 800): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          0.8
+        );
+      };
+      img.onerror = () => {
+        resolve(file); // fallback to original if error
+      };
+    });
+  };
+
   const handleUpload = async () => {
     console.log("Sending description:", description);
     
@@ -70,28 +112,58 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
     }
 
     setIsLoading(true);
+    setProcessStep(0);
     setError(null);
+    
+    // Process step simulation
+    const stepInterval = setInterval(() => {
+        setProcessStep(prev => (prev < 2 ? prev + 1 : prev));
+    }, 1200);
+
+    // Abort controller
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     const formData = new FormData();
-    if (file) formData.append('image', file);
+    if (file) {
+        const compressedFile = await compressImage(file);
+        formData.append('image', compressedFile);
+    }
     if (description.trim()) formData.append('description', description);
     formData.append('language', i18n.language.split('-')[0]);
 
     try {
+      // 60s request timeout handled by AbortController
+      const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 60000);
+
       const response = await api.post('/api/diagnose', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        signal: abortControllerRef.current.signal,
       });
+      
+      clearTimeout(timeoutId);
+      
       if (response.data.status === 'success') {
         onResult(response.data);
       } else {
         setError(response.data.error || 'Diagnostic analysis failed.');
       }
     } catch (err: any) {
-      console.error("API Error:", err);
-      setError(err.response?.data?.error || 'Unable to analyze. Please check your network and try again.');
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        console.log("Request was canceled due to timeout or manual abort.");
+        setError('Analysis timed out. Falling back, please try again.');
+      } else {
+        console.error("API Error:", err);
+        setError(err.response?.data?.error || 'Unable to analyze. Please check your network and try again.');
+      }
     } finally {
+      clearInterval(stepInterval);
       setIsLoading(false);
+      setProcessStep(0);
     }
   };
 
@@ -103,40 +175,77 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   };
 
   const startCamera = async () => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera interface not supported in this environment.');
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setIsCameraOpen(true);
-      setError(null);
-    } catch (err: any) {
-      console.error('Camera Access Error:', err);
-      let errorMsg = 'Camera access denied or not supported.';
-      if (err.name === 'NotAllowedError') errorMsg = 'Permission denied. Please enable camera access in your browser settings.';
-      if (err.name === 'NotFoundError') errorMsg = 'No camera found on this device.';
-      setError(errorMsg);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Camera not supported in this browser");
+      setError('Camera interface not supported in this environment.');
+      return;
     }
+    setIsCameraOpen(true);
+    setIsCameraInitializing(true);
+    setError(null);
   };
+
+  useEffect(() => {
+    if (isCameraOpen) {
+      const initCamera = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+          });
+          streamRef.current = stream;
+          console.log("Camera stream:", stream);
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current?.play().catch(e => console.error("Play error:", e));
+              setIsCameraInitializing(false);
+              console.log("Video ready:", videoRef.current?.videoWidth);
+            };
+          }
+        } catch (err: any) {
+            console.error('Camera Access Error:', err);
+            setIsCameraOpen(false);
+            setIsCameraInitializing(false);
+            if (err.name === 'NotAllowedError') {
+              alert("Camera permission denied");
+              setError('Permission denied. Please enable camera access in your browser settings.');
+            } else if (err.name === 'NotFoundError') {
+              alert("No camera device found");
+              setError('No camera found on this device.');
+            } else {
+              alert("Camera error occurred");
+              setError('Camera access denied or not supported.');
+            }
+        }
+      };
+      
+      // Allow video element to mount before requesting stream
+      const timer = setTimeout(initCamera, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCameraOpen]);
 
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setIsCameraOpen(false);
+    setIsCameraInitializing(false);
   };
 
   const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0) {
+      alert("Camera not ready");
+      return;
+    }
+    
+    if (canvasRef.current) {
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
       if (context) {
@@ -145,13 +254,15 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         canvas.toBlob((blob) => {
-          if (blob) {
-            const capturedFile = new File([blob], `neural_scan_${Date.now()}.jpg`, { type: 'image/jpeg' });
-            setFile(capturedFile);
-            setPreview(URL.createObjectURL(capturedFile));
-            stopCamera();
+          if (!blob) {
+            alert("Capture failed");
+            return;
           }
-        }, 'image/jpeg', 0.95);
+          const capturedFile = new File([blob], 'leaf.jpg', { type: 'image/jpeg' });
+          setFile(capturedFile);
+          setPreview(URL.createObjectURL(capturedFile));
+          stopCamera();
+        }, 'image/jpeg', 0.9);
       }
     }
   };
@@ -165,34 +276,37 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
   }, []);
 
   return (
-    <div className="w-full max-w-4xl mx-auto mb-20 px-4 sm:px-0 space-y-10">
-      <div className={`card-clean overflow-hidden transition-all duration-500 ${(file || isCameraOpen || description) ? 'border-teal-500 bg-teal-50/5' : 'border-dashed border-2 bg-gray-50/30'}`}>
-        <div className="grid grid-cols-1 md:grid-cols-2">
-            {/* Left side: Image Input */}
-            <div 
-              className={`p-8 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800 flex flex-col justify-center min-h-[350px] transition-colors ${isDragging ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-500 border-dashed' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-                <input 
-                    type="file" 
-                    className="hidden" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange}
-                    accept="image/*"
-                />
+    <div id="upload-section" className="w-full max-w-5xl mx-auto space-y-12 relative z-20 perspective-[2000px]">
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+
+      <div 
+        className={`card-clean overflow-hidden transition-all duration-500 transform-gpu ${isDragging ? 'scale-[1.02] border-emerald-500/50 shadow-emerald-500/20' : 'scale-100'} ${isLoading ? 'opacity-50 pointer-events-none blur-sm' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 min-h-[500px]">
+          {/* Left side: Upload Area */}
+          <div className="p-10 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-black/5 dark:border-white/5 relative group">
+            {/* Ambient hover glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 via-transparent to-teal-500/0 group-hover:from-emerald-500/5 group-hover:to-teal-500/5 transition-all duration-700 pointer-events-none" />
 
                 <AnimatePresence mode="wait">
                     {isCameraOpen ? (
                     <motion.div key="camera" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-                        <div className="relative aspect-square bg-gray-950 rounded-3xl overflow-hidden shadow-2xl border border-white/5">
-                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        <div className="relative aspect-square bg-gray-950 rounded-3xl overflow-hidden shadow-2xl border border-white/5 flex items-center justify-center">
+                            {isCameraInitializing && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/80 z-10 space-y-4">
+                                    <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+                                    <span className="text-[10px] font-black tracking-widest text-teal-500 uppercase">Initializing Camera...</span>
+                                </div>
+                            )}
+                            <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transition-opacity duration-300 ${isCameraInitializing ? 'opacity-0' : 'opacity-100'}`} />
                             <canvas ref={canvasRef} className="hidden" />
                         </div>
                         <div className="flex justify-center gap-4">
                             <button onClick={stopCamera} className="btn-secondary rounded-2xl w-14 h-14 flex items-center justify-center p-0"><X size={24} /></button>
-                            <button onClick={captureImage} className="btn-primary rounded-2xl px-8 flex items-center gap-4 shadow-xl shadow-teal-500/20"><Camera size={20} /> Capture</button>
+                            <button onClick={captureImage} disabled={isCameraInitializing} className="btn-primary rounded-2xl px-8 flex items-center gap-4 shadow-xl shadow-teal-500/20 disabled:opacity-50"><Camera size={20} /> Capture</button>
                         </div>
                     </motion.div>
                     ) : file ? (
@@ -201,22 +315,27 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                             <img src={preview!} className="w-full h-full object-cover" alt="Specimen Preview" />
                             <button onClick={clearFile} className="absolute top-4 right-4 p-3 bg-gray-950/40 hover:bg-red-600 text-white rounded-2xl backdrop-blur-xl transition-all shadow-xl"><X size={20} /></button>
                         </div>
-                        <div className="flex items-center gap-3 text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest bg-teal-50 dark:bg-teal-900/30 px-4 py-2 rounded-xl">
-                            <ImageIcon size={14} /> Specimen Loaded
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="flex items-center gap-3 text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest bg-teal-50 dark:bg-teal-900/30 px-4 py-3 rounded-xl">
+                                <ImageIcon size={14} /> Specimen Loaded
+                            </div>
+                            <button onClick={() => { clearFile(); startCamera(); }} className="btn-secondary px-4 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl flex items-center gap-2 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                                <Camera size={14} /> Retake
+                            </button>
                         </div>
                     </motion.div>
                     ) : (
-                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-6">
-                        <div className="w-20 h-20 bg-teal-50 dark:bg-teal-900/10 rounded-[1.75rem] flex items-center justify-center mx-auto shadow-inner group cursor-pointer hover:scale-105 transition-all" onClick={() => fileInputRef.current?.click()}>
-                            <ImageIcon className="text-teal-600 dark:text-teal-400 w-8 h-8 group-hover:scale-110 transition-transform" />
+                    <motion.div key="empty" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-8 relative z-10">
+                        <div className="w-24 h-24 bg-zinc-50 dark:bg-zinc-800/50 border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center mx-auto shadow-inner group-hover:shadow-emerald-500/20 cursor-pointer transition-all duration-500" onClick={() => fileInputRef.current?.click()}>
+                            <ImageIcon className="text-zinc-400 dark:text-zinc-500 w-10 h-10 group-hover:scale-110 group-hover:text-emerald-500 transition-transform duration-500" />
                         </div>
                         <div>
-                            <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">{t('upload_drag_drop', { defaultValue: 'Drag & drop leaf image here' })}</h4>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{t('upload_or_browse', { defaultValue: 'or click to browse files' })}</p>
+                            <h4 className="text-xl font-semibold text-zinc-900 dark:text-white tracking-tight">{t('upload_drag_drop', { defaultValue: 'Drag & drop leaf image here' })}</h4>
+                            <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium tracking-wide mt-2">{t('upload_or_browse', { defaultValue: 'or click to browse files' })}</p>
                         </div>
-                        <div className="flex gap-3 justify-center">
-                            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">{t('btn_browser')}</button>
-                            <button onClick={startCamera} className="btn-secondary py-3 px-6 text-[9px] font-black uppercase tracking-widest rounded-xl">{t('btn_camera')}</button>
+                        <div className="flex gap-4 justify-center">
+                            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary px-8">{t('btn_browser')}</button>
+                            <button onClick={startCamera} className="btn-secondary px-8 flex items-center gap-2"><Camera size={16}/> {t('btn_camera')}</button>
                         </div>
                     </motion.div>
                     )}
@@ -224,13 +343,15 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
             </div>
 
             {/* Right side: Text Input */}
-            <div className="p-8 flex flex-col justify-center bg-gray-50/30 dark:bg-gray-900/10">
-                <div className="space-y-6">
-                    <div className="flex items-center gap-3">
-                        <TextQuote size={18} className="text-teal-600 dark:text-teal-400" />
+            <div className="p-10 flex flex-col justify-center bg-zinc-50/50 dark:bg-[#09090b]/50 relative">
+                <div className="space-y-6 relative z-10">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
+                            <TextQuote size={20} />
+                        </div>
                         <div>
-                            <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{t('symptom_title')}</h4>
-                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{t('symptom_subtitle')}</p>
+                            <h4 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">{t('symptom_title')}</h4>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium tracking-wide mt-1">{t('symptom_subtitle')}</p>
                         </div>
                     </div>
                     
@@ -238,7 +359,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder={t('symptom_placeholder')}
-                        className="w-full h-48 p-5 bg-white dark:bg-gray-900 border-2 border-gray-100 dark:border-gray-800 rounded-3xl outline-none focus:border-teal-500 transition-all text-sm font-medium dark:text-white resize-none shadow-inner"
+                        className="w-full h-48 p-6 bg-white dark:bg-[#121214] border border-black/5 dark:border-white/10 rounded-2xl outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all text-sm font-medium dark:text-zinc-200 resize-none shadow-sm"
                         disabled={isLoading}
                     />
                     
@@ -252,7 +373,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                             <button 
                                 key={tip.key}
                                 onClick={() => setDescription(prev => prev ? `${prev}, ${t(tip.key).toLowerCase()}` : t(tip.key))}
-                                className="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-[9px] font-black text-gray-400 uppercase tracking-widest rounded-lg hover:border-teal-500 hover:text-teal-600 transition-all"
+                                className="px-4 py-2 bg-white dark:bg-[#121214] border border-black/5 dark:border-white/10 text-xs font-medium text-zinc-600 dark:text-zinc-400 rounded-xl hover:border-emerald-500/30 hover:text-emerald-500 transition-all shadow-sm active:scale-95"
                             >
                                 + {t(tip.key)}
                             </button>
@@ -264,28 +385,62 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
       </div>
 
       {/* Execute Section */}
-      <div className="flex flex-col items-center space-y-6">
-          <button
+      <div className="flex flex-col items-center space-y-6 relative z-30">
+          {isLoading && (
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: -20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: -20 }} className="w-full max-w-lg card-clean p-8 space-y-6 mb-4 relative overflow-hidden">
+                <div className="absolute inset-0 bg-emerald-500/5 animate-pulse rounded-3xl" />
+                <div className="relative z-10 flex justify-between items-center">
+                    <span className="text-xs font-semibold tracking-wider uppercase text-emerald-600 dark:text-emerald-400">Analysis Progress</span>
+                    <span className="text-xs font-bold text-zinc-500">{Math.min(100, (processStep + 1) * 33)}%</span>
+                </div>
+                <div className="relative z-10 w-full bg-zinc-100 dark:bg-zinc-800/50 h-1.5 rounded-full overflow-hidden">
+                    <motion.div 
+                        className="h-full bg-emerald-500"
+                        initial={{ width: '0%' }}
+                        animate={{ width: `${(processStep + 1) * 33}%` }}
+                        transition={{ duration: 0.8, ease: "easeInOut" }}
+                    />
+                </div>
+                <div className="relative z-10 space-y-4 pt-2">
+                    <div className="flex items-center gap-4 text-sm">
+                        <Loader2 className={`w-4 h-4 ${processStep === 0 ? 'text-emerald-500 animate-spin' : 'text-emerald-500/30'}`} />
+                        <span className={processStep === 0 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>Uploading image to neural network...</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                        <Loader2 className={`w-4 h-4 ${processStep === 1 ? 'text-emerald-500 animate-spin' : 'text-zinc-300 dark:text-zinc-700'}`} />
+                        <span className={processStep === 1 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>Running CNN diagnosis...</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                        <Loader2 className={`w-4 h-4 ${processStep === 2 ? 'text-emerald-500 animate-spin' : 'text-zinc-300 dark:text-zinc-700'}`} />
+                        <span className={processStep === 2 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>Synthesizing treatment plan via LLM...</span>
+                    </div>
+                </div>
+            </motion.div>
+          )}
+
+          <motion.button
+            whileHover={!isLoading && (file || description.trim()) ? { scale: 1.02, y: -2 } : {}}
+            whileTap={!isLoading && (file || description.trim()) ? { scale: 0.98 } : {}}
             onClick={handleUpload}
             disabled={isLoading || (!file && !description.trim())}
-            className="w-full max-w-md py-6 bg-teal-700 hover:bg-teal-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white rounded-[2rem] font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-teal-900/20 active:scale-[0.98]"
+            className="w-full max-w-lg py-5 bg-zinc-900 hover:bg-black disabled:bg-zinc-100 dark:bg-white dark:hover:bg-zinc-100 dark:disabled:bg-zinc-800/50 disabled:text-zinc-400 dark:disabled:text-zinc-600 text-white dark:text-zinc-900 rounded-2xl font-semibold tracking-wide transition-all flex items-center justify-center gap-3 shadow-xl disabled:shadow-none"
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                {t('btn_analyzing', { defaultValue: 'Analyzing Plant Condition...' })}
+                {t('btn_analyzing', { defaultValue: 'Processing...' })}
               </>
             ) : (
               <>
-                <BrainCircuit size={22} />
+                <BrainCircuit size={20} />
                 {t('btn_analyze', { defaultValue: 'Analyze Specimen' })}
               </>
             )}
-          </button>
+          </motion.button>
           
-          <div className="flex items-center gap-3 opacity-30">
-              <Sparkles size={14} className="text-teal-500" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('neural_engine_active')}</span>
+          <div className="flex items-center gap-3 opacity-50">
+              <Sparkles size={14} className="text-emerald-500" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">{t('neural_engine_active')}</span>
           </div>
       </div>
 

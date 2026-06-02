@@ -63,7 +63,7 @@ class RAGEngine:
         faiss.write_index(self.index, self.index_path)
         print(f"FAISS index built and saved to {self.index_path}")
 
-    def retrieve_context(self, query, k=3):
+    def retrieve_context(self, query, k=2):
         if not self.index or not self.documents:
             return "No local knowledge available."
 
