@@ -90,6 +90,7 @@ const Header: React.FC<HeaderProps> = ({ darkMode, onToggleTheme }) => {
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="lg:hidden p-3 bg-white/50 dark:bg-[#121214]/60 backdrop-blur-xl text-zinc-500 hover:text-emerald-500 border border-black/5 dark:border-white/10 rounded-xl shadow-sm transition-all"
+            aria-label="Toggle mobile navigation menu"
           >
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>

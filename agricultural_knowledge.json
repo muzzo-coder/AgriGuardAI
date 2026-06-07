@@ -1,83 +1,533 @@
 [
   {
-    "disease": "Bacteria Spot",
-    "symptoms": "Small, water-soaked spots on leaves which later turn brown and necrotic. Spots may have a yellow halo. Infected fruit show small, raised, black spots.",
-    "causes": "Caused by Xanthomonas bacteria. Spread by splashing rain, overhead irrigation, and contaminated tools. Thrives in warm, humid conditions.",
-    "treatment": "Apply copper-based fungicides. Use organic bactericides like Serenade (Bacillus subtilis). Remove and destroy infected plant debris.",
-    "prevention": "Rotate crops every 2-3 years. Use disease-free seeds and transplants. Avoid overhead irrigation. Maintain good airflow between plants.",
-    "additional_tips": "Mulching helps prevent bacteria from splashing from the soil onto the leaves."
+    "disease": "Apple scab",
+    "scientific_name": "Venturia inaequalis",
+    "symptoms": "Olive-green to brown velvety spots on leaf surfaces; yellowing foliage; dark, scabby, sunken lesions on mature fruit.",
+    "causes": "Fungal pathogen overwintering in fallen leaves. Spores are released in wet spring weather and spread by wind and splashing rain.",
+    "fungicides": [
+      {
+        "name": "Captan",
+        "active_ingredient": "Captan (Trichloromethylsulfenyl)",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M04)",
+        "dosage": "1.5 - 2.0 lbs/acre",
+        "frequency": "Apply every 7-10 days from green tip stage until harvest."
+      },
+      {
+        "name": "Myclobutanil",
+        "active_ingredient": "Myclobutanil (Triazole)",
+        "mode_of_action": "Demethylation Inhibitor (DMI - FRAC 3)",
+        "dosage": "2.0 - 8.0 oz/acre",
+        "frequency": "Apply at 10-14 day intervals under preventive regimes."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Apply protective fungicides like Captan or systemic DMI fungicides like Myclobutanil during wet periods. Keep orchard floor free of fallen leaf litter.",
+    "prevention": "Prune trees to open canopy and increase sunlight penetration. Rake and destroy fallen leaves in autumn. Plant scab-resistant apple cultivars like Enterprise or Liberty.",
+    "recovery_timeline": "14 - 21 Days",
+    "reference_sources": "Cornell Fruit Resources, USDA Agricultural Research Service"
   },
   {
-    "disease": "Early Blight",
-    "symptoms": "Target-like spots with concentric rings on older leaves. Lower leaves usually affected first. Yellowing of leaves around the spots.",
+    "disease": "Bacterial spot",
+    "scientific_name": "Xanthomonas campestris pv. vesicatoria",
+    "symptoms": "Small, water-soaked lesions on leaves turning black/brown with yellow halos; dark scabby lesions on fruit surface.",
+    "causes": "Bacterial pathogen Xanthomonas. Spread by splashing rain, overhead irrigation, and contaminated tools. Thrives in warm, humid conditions.",
+    "fungicides": [
+      {
+        "name": "Copper Hydroxide",
+        "active_ingredient": "Copper Hydroxide",
+        "mode_of_action": "Multi-site inorganic contact bactericide (FRAC M01)",
+        "dosage": "1.0 - 2.0 lbs/acre",
+        "frequency": "Apply every 7-10 days during periods of high humidity."
+      },
+      {
+        "name": "Streptomycin Sulfate",
+        "active_ingredient": "Streptomycin Sulfate",
+        "mode_of_action": "Protein synthesis inhibitor antibiotic (FRAC 25)",
+        "dosage": "1.0 lb / 100 gal water",
+        "frequency": "Apply every 5-7 days during bloom periods to prevent initial infection."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Apply copper-based bactericides. Use organic bactericides like Serenade (Bacillus subtilis). Remove and destroy infected plant debris.",
+    "prevention": "Rotate crops every 2-3 years. Use disease-free seeds and transplants. Avoid overhead irrigation. Maintain good airflow between plants.",
+    "recovery_timeline": "10 - 14 Days",
+    "reference_sources": "University of Florida IFAS Extension, Purdue University Extension"
+  },
+  {
+    "disease": "Black rot",
+    "scientific_name": "Guignardia bidwellii",
+    "symptoms": "Reddish-brown circular spots on leaves; fruit shrivels into black, wrinkled, hard mummies containing pycnidia.",
+    "causes": "Fungal pathogen overwintering in vine mummies and cankers. Spread by wind-blown spores and splashing rain in wet weather.",
+    "fungicides": [
+      {
+        "name": "Mancozeb",
+        "active_ingredient": "Mancozeb (Dithiocarbamate)",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M03)",
+        "dosage": "3.0 - 4.0 lbs/acre",
+        "frequency": "Apply every 7-10 days starting at bud break until bloom."
+      },
+      {
+        "name": "Ziram",
+        "active_ingredient": "Ziram (Dithiocarbamate)",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M03)",
+        "dosage": "3.0 - 4.0 lbs/acre",
+        "frequency": "Apply at 7-14 day intervals under high disease pressure."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Apply protectant fungicides like Mancozeb early in the season. Remove all mummified fruit from the vineyard during winter pruning.",
+    "prevention": "Remove and destroy all mummified fruit. Prune vines for maximum canopy airflow. Keep the vineyard floor clean and free of crop residue.",
+    "recovery_timeline": "14 - 21 Days",
+    "reference_sources": "Ohio State University Extension, Penn State Extension"
+  },
+  {
+    "disease": "Cedar apple rust",
+    "scientific_name": "Gymnosporangium juniperi-virginianae",
+    "symptoms": "Bright orange-yellow spots on upper leaf surfaces; tube-like structures (aecia) on the leaf undersides containing spores.",
+    "causes": "Fungus requiring both apple trees and red cedars to complete its life cycle. Spores travel by wind between host species.",
+    "fungicides": [
+      {
+        "name": "Myclobutanil",
+        "active_ingredient": "Myclobutanil (Triazole)",
+        "mode_of_action": "Demethylation Inhibitor (DMI - FRAC 3)",
+        "dosage": "2.0 - 8.0 oz/acre",
+        "frequency": "Apply every 7-10 days from pink bud stage through petal fall."
+      },
+      {
+        "name": "Mancozeb",
+        "active_ingredient": "Mancozeb (Dithiocarbamate)",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M03)",
+        "dosage": "3.0 - 4.0 lbs/acre",
+        "frequency": "Apply every 7-10 days starting at green tip stage."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Spray systemic DMI fungicides like Myclobutanil early in the season to disrupt rust spore cell wall synthesis.",
+    "prevention": "Eradicate nearby red cedar trees within a 2-mile radius if possible. Plant resistant apple cultivars. Prune cedar galls before spring.",
+    "recovery_timeline": "14 - 21 Days",
+    "reference_sources": "Virginia Tech Cooperative Extension, USDA Forest Service"
+  },
+  {
+    "disease": "Cercospora leaf spot Gray leaf spot",
+    "scientific_name": "Cercospora zeae-maydis",
+    "symptoms": "Rectangular, tan-to-gray lesions running parallel to leaf veins, eventually forming a grayish velvety sheen.",
+    "causes": "Fungus overwintering in corn crop residue on the soil surface. Favored by high humidity and moderate temperatures.",
+    "fungicides": [
+      {
+        "name": "Pyraclostrobin",
+        "active_ingredient": "Pyraclostrobin (Strobilurin)",
+        "mode_of_action": "Quinone Outside Inhibitor (QoI - FRAC 11)",
+        "dosage": "6.0 - 12.0 fl oz/acre",
+        "frequency": "Apply once at tassel stage or when lesions first appear on lower leaves."
+      },
+      {
+        "name": "Propiconazole",
+        "active_ingredient": "Propiconazole (Triazole)",
+        "mode_of_action": "Demethylation Inhibitor (DMI - FRAC 3)",
+        "dosage": "4.0 - 6.0 fl oz/acre",
+        "frequency": "Apply at 7-14 day intervals if environmental conditions remain wet."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Apply strobilurin or triazole fungicides at the onset of disease. Manage crop debris via tillage.",
+    "prevention": "Practice crop rotation for at least 1-2 years. Utilize conservation tillage to bury crop residues. Select tolerant hybrids.",
+    "recovery_timeline": "10 - 14 Days",
+    "reference_sources": "Iowa State University Extension, Purdue Extension"
+  },
+  {
+    "disease": "Common rust",
+    "scientific_name": "Puccinia sorghi",
+    "symptoms": "Cinnamon-brown, powdery, elongated pustules (uredinia) on both upper and lower leaf surfaces.",
+    "causes": "Fungus spread by wind-borne spores originating in southern overwintering locations. Favored by cool temperatures and high dew.",
+    "fungicides": [
+      {
+        "name": "Azoxystrobin",
+        "active_ingredient": "Azoxystrobin (Strobilurin)",
+        "mode_of_action": "Quinone Outside Inhibitor (QoI - FRAC 11)",
+        "dosage": "6.0 - 15.5 fl oz/acre",
+        "frequency": "Apply every 7-14 days at the first sign of pustules."
+      },
+      {
+        "name": "Pyraclostrobin",
+        "active_ingredient": "Pyraclostrobin (Strobilurin)",
+        "mode_of_action": "Quinone Outside Inhibitor (QoI - FRAC 11)",
+        "dosage": "6.0 - 9.0 fl oz/acre",
+        "frequency": "Apply once or twice depending on field severity."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Apply strobilurin fungicides like Azoxystrobin to prevent cellular respiration of the rust spores.",
+    "prevention": "Plant resistant crop hybrids. Manage canopy density to reduce leaf wetness and morning dew accumulation.",
+    "recovery_timeline": "7 - 14 Days",
+    "reference_sources": "University of Illinois Extension, USDA Agricultural Research Service"
+  },
+  {
+    "disease": "Early blight",
+    "scientific_name": "Alternaria solani",
+    "symptoms": "Target-like dark spots with concentric rings on older leaves; yellowing halos surrounding lesions; stem lesions.",
     "causes": "Caused by the fungus Alternaria solani. Survives in soil and plant debris. Favored by warm temperatures and high humidity or frequent rainfall.",
+    "fungicides": [
+      {
+        "name": "Chlorothalonil",
+        "active_ingredient": "Chlorothalonil",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M05)",
+        "dosage": "1.5 - 2.0 pints/acre",
+        "frequency": "Apply every 7-10 days as soon as weather conditions favor disease development."
+      },
+      {
+        "name": "Copper Oxychloride",
+        "active_ingredient": "Copper Oxychloride",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M01)",
+        "dosage": "2.0 - 3.0 lbs/acre",
+        "frequency": "Apply every 7-10 days under organic management regimes."
+      }
+    ],
+    "pesticides": [],
     "treatment": "Apply fungicides like Chlorothalonil or copper-based sprays. Use organic options like Neem oil or potassium bicarbonate. Prune lower leaves to improve airflow.",
     "prevention": "Keep foliage dry. Space plants properly. Mulch around the base. Practice crop rotation and remove garden debris after harvest.",
-    "additional_tips": "Stake plants to keep them off the ground and improve air circulation."
+    "recovery_timeline": "10 - 14 Days",
+    "reference_sources": "North Carolina State University Extension, UC IPM"
   },
   {
-    "disease": "Late Blight",
+    "disease": "Esca (Black Measles)",
+    "scientific_name": "Phaeomoniella chlamydospora / Phaeoacremonium minimum",
+    "symptoms": "Interveinal chlorosis and necrosis ('tiger stripe' leaves); small dark spots with purple halos on fruit; wood rotting/staining.",
+    "causes": "Complex of wood-infecting fungal pathogens. Enter through pruning wounds during rain events.",
+    "fungicides": [
+      {
+        "name": "Thiophanate-methyl",
+        "active_ingredient": "Thiophanate-methyl",
+        "mode_of_action": "Methyl Benzimidazole Carbamate (MBC - FRAC 1)",
+        "dosage": "1.0 - 1.5 lbs/acre",
+        "frequency": "Spray immediately after pruning to protect open cuts."
+      },
+      {
+        "name": "Myclobutanil",
+        "active_ingredient": "Myclobutanil",
+        "mode_of_action": "Demethylation Inhibitor (DMI - FRAC 3)",
+        "dosage": "4.0 - 5.0 oz/acre",
+        "frequency": "Foliar/wound application during dormant pruning phases."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Protect pruning wounds with Thiophanate-methyl wound sealant. Prune out dead vines and replace with healthy plants.",
+    "prevention": "Sanitize pruning tools with bleach or alcohol between vines. Avoid pruning during wet weather when spores are active.",
+    "recovery_timeline": "6 - 12 Months",
+    "reference_sources": "UC IPM Guidelines for Grapevines, Oregon State University"
+  },
+  {
+    "disease": "Haunglongbing (Citrus greening)",
+    "scientific_name": "Candidatus Liberibacter asiaticus",
+    "symptoms": "Blotchy mottled yellowing of leaves; small, asymmetric, bitter green fruit; twig dieback and stunted growth.",
+    "causes": "Phloem-limited bacterium Candidatus Liberibacter. Transmitted by the Asian citrus psyllid vector.",
+    "fungicides": [],
+    "pesticides": [
+      {
+        "name": "Imidacloprid",
+        "active_ingredient": "Imidacloprid",
+        "mode_of_action": "Neonicotinoid Systemic Insecticide (IRAC 4A)",
+        "dosage": "12.0 - 14.0 fl oz/acre",
+        "frequency": "Apply as a soil drench once per season to control psyllids."
+      },
+      {
+        "name": "Thiamethoxam",
+        "active_ingredient": "Thiamethoxam",
+        "mode_of_action": "Neonicotinoid Systemic/Contact (IRAC 4A)",
+        "dosage": "4.0 - 5.5 oz/acre",
+        "frequency": "Foliar spray every 14-21 days during flushing periods."
+      }
+    ],
+    "treatment": "Incurable disease. Apply systemic neonicotinoid pesticides like Imidacloprid to suppress the citrus psyllid vector. Provide nutrient support.",
+    "prevention": "Control Asian citrus psyllid populations using sticky traps. Remove and destroy infected trees to prevent farm transmission.",
+    "recovery_timeline": "Incurable (Vector Suppression Only)",
+    "reference_sources": "USDA APHIS, University of California Agriculture and Natural Resources"
+  },
+  {
+    "disease": "Late blight",
+    "scientific_name": "Phytophthora infestans",
     "symptoms": "Large, irregular, water-soaked patches on leaves that quickly turn brown and papery. White fuzzy growth on the underside of leaves in humid weather. Dark brown lesions on stems.",
     "causes": "Caused by the oomycete Phytophthora infestans. Can destroy entire crops rapidly. Spread by wind-borne spores.",
-    "treatment": "Immediate application of specialized fungicides. For organic gardens, use copper sprays early. Remove and destroy infected plants immediately—do not compost them.",
-    "prevention": "Plant resistant varieties. Avoid planting near potatoes (which share the disease). Ensure good drainage. Monitor weather for 'late blight weather' (cool and wet).",
-    "additional_tips": "Early detection is critical. Once established, late blight is very difficult to control."
+    "fungicides": [
+      {
+        "name": "Metalaxyl",
+        "active_ingredient": "Metalaxyl",
+        "mode_of_action": "Phenylamide RNA Synthesis Inhibitor (FRAC 4)",
+        "dosage": "1.5 - 2.0 lbs/acre",
+        "frequency": "Apply every 10-14 days as a preventative or early curative spray."
+      },
+      {
+        "name": "Cymoxanil",
+        "active_ingredient": "Cymoxanil",
+        "mode_of_action": "Cyanoacetamide-oxime penetrant (FRAC 27)",
+        "dosage": "3.2 - 5.0 oz/acre",
+        "frequency": "Apply every 7-10 days under high humidity conditions."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Immediate application of specialized systemic fungicides like Metalaxyl or Cymoxanil. Remove and destroy infected plants immediately.",
+    "prevention": "Plant resistant varieties. Avoid planting near potatoes (which share the disease). Ensure good drainage. Monitor weather for cool and wet conditions.",
+    "recovery_timeline": "7 - 10 Days",
+    "reference_sources": "Cornell University Vegetable Pathology, USDA Agricultural Research Service"
   },
   {
     "disease": "Leaf Mold",
+    "scientific_name": "Passalora fulva",
     "symptoms": "Pale green or yellowish spots on the upper surface of older leaves. Olive-green to brown velvety growth on the leaf underside. Leaves eventually turn brown and wither.",
     "causes": "Caused by the fungus Passalora fulva. Primarily occurs in greenhouses with high humidity (above 85%) and poor ventilation.",
+    "fungicides": [
+      {
+        "name": "Chlorothalonil",
+        "active_ingredient": "Chlorothalonil",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M05)",
+        "dosage": "1.5 - 2.0 pints/acre",
+        "frequency": "Apply every 7-10 days at first sign of symptoms."
+      },
+      {
+        "name": "Copper Hydroxide",
+        "active_ingredient": "Copper Hydroxide",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M01)",
+        "dosage": "1.5 - 2.0 lbs/acre",
+        "frequency": "Apply every 7-10 days in organic systems."
+      }
+    ],
+    "pesticides": [],
     "treatment": "Improve greenhouse ventilation. Use fungicides if infestation is severe. Organic treatments include copper-based sprays.",
     "prevention": "Reduce humidity. Prune for better airflow. Use resistant cultivars. Keep greenhouse temperatures above 60°F (15°C) at night.",
-    "additional_tips": "Avoid late-day watering which leaves foliage wet overnight."
+    "recovery_timeline": "10 - 14 Days",
+    "reference_sources": "Penn State Extension, Rutgers Cooperative Extension"
   },
   {
-    "disease": "Septoria Leaf Spot",
-    "symptoms": "Small, circular spots with gray centers and dark borders. Tiny black specks (fruiting bodies) in the center of spots. Usually starts on lower leaves.",
+    "disease": "Leaf blight (Isariopsis Leaf Spot)",
+    "scientific_name": "Pseudocercospora vitis",
+    "symptoms": "Small, dull brown or black spots on leaves, expanding to large necrotic patches and causing premature defoliation.",
+    "causes": "Fungal pathogen Pseudocercospora vitis. Thrives in humid, warm grape canopy environments.",
+    "fungicides": [
+      {
+        "name": "Copper Oxychloride",
+        "active_ingredient": "Copper Oxychloride",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M01)",
+        "dosage": "2.0 - 3.0 lbs/acre",
+        "frequency": "Apply every 7-10 days starting post-bloom."
+      },
+      {
+        "name": "Captan",
+        "active_ingredient": "Captan",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M04)",
+        "dosage": "2.0 - 4.0 lbs/acre",
+        "frequency": "Apply every 10-14 days to protect new growth."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Apply contact copper or Captan fungicides to prevent spore germination. Prune lower foliage to increase air circulation.",
+    "prevention": "Prune grape vines for high airflow, destroy all fallen leaf residue, and establish clean weed-free vineyard floors.",
+    "recovery_timeline": "14 - 21 Days",
+    "reference_sources": "Texas A&M AgriLife Extension, University of Georgia Extension"
+  },
+  {
+    "disease": "Leaf scorch",
+    "scientific_name": "Xylella fastidiosa / Diplocarpon earlianum",
+    "symptoms": "Necrotic brown edges on foliage; yellow halos separating dead and green tissue; scorched papery leaves.",
+    "causes": "Can be bacterial (Xylella fastidiosa) or fungal (Diplocarpon earlianum). Spread by insect vectors or wet foliage.",
+    "fungicides": [],
+    "pesticides": [
+      {
+        "name": "Imidacloprid",
+        "active_ingredient": "Imidacloprid",
+        "mode_of_action": "Neonicotinoid Systemic (IRAC 4A)",
+        "dosage": "8.0 - 16.0 fl oz/acre",
+        "frequency": "Apply once as soil treatment to control vector insects (leafhoppers/sharpshooters)."
+      }
+    ],
+    "treatment": "If bacterial, manage vector insects with Imidacloprid. Remove and prune scorched branches to minimize spread.",
+    "prevention": "Ensure proper irrigation to prevent environmental drought stress. Sanitize tools between cuts.",
+    "recovery_timeline": "14 - 28 Days",
+    "reference_sources": "UC IPM guidelines, USDA Agricultural Research Service"
+  },
+  {
+    "disease": "Northern Leaf Blight",
+    "scientific_name": "Exserohilum turcicum",
+    "symptoms": "Long, elliptical, cigar-shaped grayish-green lesions on leaves, progressing to complete blighting.",
+    "causes": "Fungus overwintering in corn debris. Favored by wet, humid conditions and moderate temperatures.",
+    "fungicides": [
+      {
+        "name": "Pyraclostrobin",
+        "active_ingredient": "Pyraclostrobin",
+        "mode_of_action": "Quinone Outside Inhibitor (QoI - FRAC 11)",
+        "dosage": "6.0 - 12.0 fl oz/acre",
+        "frequency": "Apply once at late vegetative stage or at first symptom onset."
+      },
+      {
+        "name": "Propiconazole",
+        "active_ingredient": "Propiconazole",
+        "mode_of_action": "Demethylation Inhibitor (DMI - FRAC 3)",
+        "dosage": "4.0 - 6.0 fl oz/acre",
+        "frequency": "Apply every 10-14 days if wet weather continues."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Apply systemic fungicides like Pyraclostrobin or Propiconazole to protect upper leaf canopy.",
+    "prevention": "Rotate crops with non-grass species, carry out deep tillage to bury crop debris, and plant resistant hybrids.",
+    "recovery_timeline": "10 - 14 Days",
+    "reference_sources": "Iowa State Extension, Purdue Extension"
+  },
+  {
+    "disease": "Powdery mildew",
+    "scientific_name": "Podosphaera leucotricha / Erysiphe necator",
+    "symptoms": "White, powdery, cobweb-like fungal patches on leaves, buds, and young stems; leaf curling and distortion.",
+    "causes": "Fungal pathogens. Unlike most fungi, they do not require free water to germinate, thriving in high humidity and shade.",
+    "fungicides": [
+      {
+        "name": "Elemental Sulfur",
+        "active_ingredient": "Sulfur",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M02)",
+        "dosage": "3.0 - 10.0 lbs/acre",
+        "frequency": "Apply every 7-10 days starting at green tip stage."
+      },
+      {
+        "name": "Myclobutanil",
+        "active_ingredient": "Myclobutanil",
+        "mode_of_action": "Demethylation Inhibitor (DMI - FRAC 3)",
+        "dosage": "3.0 - 5.0 oz/acre",
+        "frequency": "Apply every 10-14 days to prevent leaf/fruit infections."
+      }
+    ],
+    "pesticides": [],
+    "treatment": "Spray sulfur or DMI fungicides like Myclobutanil. Organic options include Neem oil or potassium bicarbonate.",
+    "prevention": "Ensure full sun exposure. Prune vines or tree canopies to improve airflow and reduce microclimatic humidity.",
+    "recovery_timeline": "7 - 14 Days",
+    "reference_sources": "UC IPM Guidelines, Cornell University Fruit Resources"
+  },
+  {
+    "disease": "Septoria leaf spot",
+    "scientific_name": "Septoria lycopersici",
+    "symptoms": "Small, circular spots with gray centers and tiny black dots (pycnidia) in the middle; lower foliage turns yellow and falls off.",
     "causes": "Caused by the fungus Septoria lycopersici. Spreads by splashing water and contaminated tools. Can survive on weeds and crop debris.",
+    "fungicides": [
+      {
+        "name": "Chlorothalonil",
+        "active_ingredient": "Chlorothalonil",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M05)",
+        "dosage": "1.5 - 2.0 pints/acre",
+        "frequency": "Apply every 7-10 days immediately following rainfall events."
+      },
+      {
+        "name": "Copper Hydroxide",
+        "active_ingredient": "Copper Hydroxide",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M01)",
+        "dosage": "1.5 - 2.0 lbs/acre",
+        "frequency": "Apply every 7-10 days under organic conditions."
+      }
+    ],
+    "pesticides": [],
     "treatment": "Apply fungicides containing copper or chlorothalonil. Remove affected leaves to slow the spread. Use organic biofungicides.",
     "prevention": "Avoid overhead watering. Rotate crops. Keep the garden free of weeds. Use mulch to prevent soil splashing.",
-    "additional_tips": "Do not work in the garden when the plants are wet to avoid spreading spores."
+    "recovery_timeline": "10 - 14 Days",
+    "reference_sources": "University of Wisconsin Extension, UC IPM"
+  },
+  {
+    "disease": "Spider mites Two-spotted spider mite",
+    "scientific_name": "Tetranychus urticae",
+    "symptoms": "Fine pale-yellow stippling on upper leaf surfaces; dense silken webbing on leaf undersides; leaf bronzing.",
+    "causes": "Tetranychus urticae, tiny arachnids. Thrive in hot, dry conditions. Can multiply rapidly.",
+    "fungicides": [],
+    "pesticides": [
+      {
+        "name": "Abamectin",
+        "active_ingredient": "Abamectin",
+        "mode_of_action": "Chloride channel activator (IRAC 6)",
+        "dosage": "8.0 - 16.0 fl oz/acre",
+        "frequency": "Apply every 7-14 days as needed to control spider mite outbreaks."
+      },
+      {
+        "name": "Bifenazate",
+        "active_ingredient": "Bifenazate",
+        "mode_of_action": "Mitochondrial complex III electron transport inhibitor (IRAC 20B)",
+        "dosage": "0.75 - 1.0 lb/acre",
+        "frequency": "Apply once per season to break the mite life cycle."
+      }
+    ],
+    "treatment": "Blast mites off with water. Use miticides like Abamectin or Bifenazate. Introduce predatory mites like Phytoseiulus persimilis.",
+    "prevention": "Keep plants well-hydrated. Avoid broad-spectrum pyrethroid insecticides that destroy predatory insects and mites.",
+    "recovery_timeline": "7 - 10 Days",
+    "reference_sources": "UC IPM Guidelines, Florida Department of Agriculture"
   },
   {
     "disease": "Target Spot",
+    "scientific_name": "Corynespora cassiicola",
     "symptoms": "Circular brown spots with concentric rings, giving a 'target' appearance. Spots are larger than those of Early Blight and may have a yellow halo.",
     "causes": "Caused by the fungus Corynespora cassiicola. Favored by high humidity and temperatures between 70-85°F (21-30°C).",
+    "fungicides": [
+      {
+        "name": "Azoxystrobin",
+        "active_ingredient": "Azoxystrobin (Strobilurin)",
+        "mode_of_action": "Quinone Outside Inhibitor (QoI - FRAC 11)",
+        "dosage": "6.0 - 15.5 fl oz/acre",
+        "frequency": "Apply every 7-14 days at the first appearance of target spots."
+      },
+      {
+        "name": "Chlorothalonil",
+        "active_ingredient": "Chlorothalonil",
+        "mode_of_action": "Multi-site contact inhibitor (FRAC M05)",
+        "dosage": "1.5 - 2.0 pints/acre",
+        "frequency": "Apply every 7-10 days."
+      }
+    ],
+    "pesticides": [],
     "treatment": "Spray with fungicides such as azoxystrobin or chlorothalonil. Organic control includes Neem oil or Bacillus amyloliquefaciens.",
     "prevention": "Improve airflow. Avoid excessively long periods of leaf wetness. Manage weeds that may host the fungus.",
-    "additional_tips": "Adequate spacing between plants is essential for reducing humidity in the canopy."
+    "recovery_timeline": "10 - 14 Days",
+    "reference_sources": "University of Florida Extension, Auburn University Extension"
   },
   {
     "disease": "Tomato Yellow Leaf Curl Virus",
-    "symptoms": "Severe stunting of plants. Leaves curl upward and turn yellow at the margins. Flower drop is common, resulting in little to no fruit production.",
+    "scientific_name": "Tomato yellow leaf curl virus (TYLCV)",
+    "symptoms": "Severe stunting of plant growth; leaves cup/curl upward and turn pale yellow at borders; high rate of blossom drop.",
     "causes": "Transmitted by silverleaf whiteflies (Bemisia tabaci). The virus is not spread by seeds or mechanical means.",
-    "treatment": "No cure for existing virus. Remove and destroy infected plants immediately. Focus on controlling whitefly populations using yellow sticky traps or insecticidal soaps.",
-    "prevention": "Use insect-proof netting. Plant resistant varieties. Control weeds in and around the garden. Use reflective mulches to deter whiteflies.",
-    "additional_tips": "Clean the area of all host plants during the off-season to break the virus cycle."
+    "fungicides": [],
+    "pesticides": [
+      {
+        "name": "Imidacloprid",
+        "active_ingredient": "Imidacloprid",
+        "mode_of_action": "Neonicotinoid Systemic (IRAC 4A)",
+        "dosage": "8.0 - 16.0 fl oz/acre",
+        "frequency": "Apply as a soil application at planting or side-dress."
+      },
+      {
+        "name": "Acetamiprid",
+        "active_ingredient": "Acetamiprid",
+        "mode_of_action": "Neonicotinoid Systemic (IRAC 4A)",
+        "dosage": "2.0 - 4.0 oz/acre",
+        "frequency": "Apply foliar spray every 7-14 days to control whitefly populations."
+      }
+    ],
+    "treatment": "Incurable viral disease. Immediately remove and destroy infected tomato plants. Treat the whitefly vectors with Imidacloprid.",
+    "prevention": "Use physical insect-proof netting in seedling stages. Plant certified TYLCV resistant cultivars. Control hosts/weeds nearby.",
+    "recovery_timeline": "Incurable (Vector Control Only)",
+    "reference_sources": "University of Florida IFAS Extension, UC IPM guidelines"
   },
   {
-    "disease": "Tomato Mosaic Virus",
-    "symptoms": "Mottling and discoloration of leaves (mosaic pattern). Leaves may be malformed or 'fern-like'. Fruit may show internal browning.",
-    "causes": "Highly contagious virus spread by contact (hands, tools) and some insects. Can survive on tobacco products and seeds.",
-    "treatment": "No cure. Remove and destroy infected plants immediately. Do not touch healthy plants after handling infected ones.",
-    "prevention": "Sanitize tools with a bleach solution. Avoid using tobacco products near plants. Wash hands thoroughly. Plant certified virus-free seeds.",
-    "additional_tips": "Milk sprays (diluted) have been used by some gardeners to help deactivate the virus on surfaces, though effectiveness varies."
-  },
-  {
-    "disease": "Two Spotted Spider Mite",
-    "symptoms": "Tiny pale yellow stippling on leaves. Fine silken webbing on the undersides of leaves or between stems. Leaves may turn bronze and drop.",
-    "causes": "Tetranychus urticae, tiny arachnids. Thrive in hot, dry conditions. Can multiply rapidly.",
-    "treatment": "Blast mites off with a strong stream of water. Use insecticidal soap, Neem oil, or horticultural oils. Introduce predatory mites like Phytoseiulus persimilis.",
-    "prevention": "Keep plants well-hydrated. Mist leaves in hot, dry weather. Avoid dusty conditions which favor mites. Avoid broad-spectrum insecticides that kill natural predators.",
-    "additional_tips": "Check the undersides of leaves regularly, especially during dry spells."
+    "disease": "Tomato mosaic virus",
+    "scientific_name": "Tomato mosaic virus (ToMV)",
+    "symptoms": "Mottling and green-yellow mosaic patterns on leaves; blistered, fern-like leaf malformations; internal browning of fruit.",
+    "causes": "Highly contagious tobamovirus spread mechanically through hands, tools, soil, and seeds. Highly stable outside host.",
+    "fungicides": [],
+    "pesticides": [],
+    "treatment": "Incurable viral disease. Uproot and burn or bury infected plants immediately. Do not touch adjacent plants.",
+    "prevention": "Sanitize tools using a 10% household bleach solution or milk. Plant certified virus-free seed. Wash hands with soap thoroughly.",
+    "recovery_timeline": "Incurable (Plant Destruction Required)",
+    "reference_sources": "UC IPM guidelines, Cornell Cooperative Extension"
   },
   {
     "disease": "Healthy Plant Care",
+    "scientific_name": "Healthy Plant Care",
     "symptoms": "Lush green leaves, strong stems, and steady growth. No visible spots, wilting, or pests.",
     "causes": "Balanced nutrients, proper watering, and good environmental conditions.",
+    "fungicides": [],
+    "pesticides": [],
     "treatment": "Continue regular maintenance. Provide balanced organic fertilizer (e.g., compost tea).",
     "prevention": "Monitor daily for early signs of trouble. Maintain soil health with organic matter. Use clean water.",
-    "additional_tips": "Healthy plants are the best defense against diseases and pests."
+    "recovery_timeline": "N/A (Healthy)",
+    "reference_sources": "Healthy plants are the best defense against diseases and pests."
   },
   {
     "topic": "Soil Preparation",

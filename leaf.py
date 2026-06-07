@@ -10,10 +10,18 @@ from tensorflow.keras.applications.efficientnet import preprocess_input
 from flask_cors import CORS
 from deep_translator import GoogleTranslator
 import json
+from dotenv import load_dotenv
 
 from google import genai
 from google.genai import types
-from dotenv import load_dotenv
+# Force rebuild of FAISS index on startup
+if os.path.exists('faiss_index.bin'):
+    try:
+        os.remove('faiss_index.bin')
+        print("Deleted existing faiss_index.bin to force rebuild on startup.")
+    except Exception as e:
+        print(f"Error removing faiss_index.bin: {e}")
+
 from rag_engine import rag_engine
 
 from quality_filter import check_image_quality
@@ -65,6 +73,63 @@ try:
 except ImportError:
     DISEASE_INFO = {}
 
+if not DISEASE_INFO:
+    print("generated_disease_info_v2 not found. Generating DISEASE_INFO dynamically...")
+    classes_path = os.path.join(BASE_DIR, 'classes_disease.json')
+    knowledge_path = os.path.join(BASE_DIR, 'agricultural_knowledge.json')
+    
+    if os.path.exists(classes_path):
+        try:
+            with open(classes_path, 'r') as f:
+                classes = json.load(f)
+                
+            knowledge = []
+            if os.path.exists(knowledge_path):
+                with open(knowledge_path, 'r') as f:
+                    knowledge = json.load(f)
+                    
+            def normalize(name):
+                return "".join(c.lower() for c in name if c.isalnum())
+                
+            for name, idx in classes.items():
+                display_name = name.replace('_', ' ')
+                matched_item = None
+                norm_name = normalize(name)
+                
+                for item in knowledge:
+                    k_disease = item.get('disease', '')
+                    if k_disease:
+                        norm_k = normalize(k_disease)
+                        if norm_name == norm_k or norm_k in norm_name or norm_name in norm_k:
+                            matched_item = item
+                            break
+                        if "bacterial" in norm_name and "bacteria" in norm_k:
+                            matched_item = item
+                            break
+                        if "spidermite" in norm_name and "spidermite" in norm_k:
+                            matched_item = item
+                            break
+                            
+                if matched_item:
+                    DISEASE_INFO[int(idx)] = {
+                        "name": matched_item.get("disease", display_name),
+                        "description": matched_item.get("symptoms", "No description available."),
+                        "treatment": matched_item.get("treatment", "Consult local extension offices for certified treatments."),
+                        "prevention": matched_item.get("prevention", "Maintain general crop hygiene and monitor regularly."),
+                        "causes": matched_item.get("causes", "Unknown pathogen.")
+                    }
+                else:
+                    DISEASE_INFO[int(idx)] = {
+                        "name": display_name,
+                        "description": f"Symptoms of {display_name} on plant foliage.",
+                        "treatment": "Apply appropriate organic or chemical fungicides/bactericides. Remove infected foliage.",
+                        "prevention": "Ensure good crop rotation, proper spacing, and avoid overhead watering.",
+                        "causes": f"Infection by {display_name} pathogen."
+                    }
+            print(f"Dynamically loaded {len(DISEASE_INFO)} disease classes into DISEASE_INFO.")
+        except Exception as ex:
+            print(f"Error loading disease info dynamically: {ex}")
+
 def get_multi_stage_prediction(image_path):
     """
     Executes the multi-stage pipeline:
@@ -101,6 +166,42 @@ def get_multi_stage_prediction(image_path):
     
     return {"stage": "disease", "top_3": top_3_results}
 
+def get_symptom_prediction(user_symptoms):
+    """
+    Computes semantic similarity between user's symptom description
+    and the symptoms/causes of all known disease classes.
+    Returns ranked list of (idx, name, confidence, info).
+    """
+    if not user_symptoms or not rag_engine:
+        return []
+        
+    # Encode user symptoms
+    user_emb = rag_engine.model.encode([user_symptoms])[0]
+    
+    ranked_results = []
+    for idx, info in DISEASE_INFO.items():
+        # Build a rich textual description of the disease symptoms & causes to compare against
+        disease_text = f"Disease: {info['name']}. Symptoms: {info['description']}. Causes: {info.get('causes', '')}"
+        disease_emb = rag_engine.model.encode([disease_text])[0]
+        
+        # Calculate Cosine Similarity
+        cos_sim = np.dot(user_emb, disease_emb) / (np.linalg.norm(user_emb) * np.linalg.norm(disease_emb))
+        
+        # Calibrate similarity to a realistic confidence score [10%, 99%]
+        # Cosine similarity for matching texts usually ranges from 0.2 to 0.8.
+        calibrated_conf = min(0.99, max(0.10, (float(cos_sim) - 0.15) / 0.65))
+        
+        ranked_results.append({
+            "id": int(idx),
+            "name": info["name"],
+            "confidence": calibrated_conf,
+            "info": info
+        })
+        
+    # Sort by confidence descending
+    ranked_results = sorted(ranked_results, key=lambda x: x["confidence"], reverse=True)
+    return ranked_results
+
 @app.route("/api/diagnose", methods=['POST'])
 def diagnose():
     start_time = time.time()
@@ -109,9 +210,86 @@ def diagnose():
         description = request.form.get('description', '').strip()
         lang = request.form.get('language', 'en')
         
-        if not image_file:
-            return jsonify({"error": "No image provided. Please upload a leaf image."}), 400
+        # Mode check
+        if not image_file and not description:
+            return jsonify({"error": "Please provide either a leaf image or a description of plant symptoms."}), 400
 
+        # Mode 2: Symptom-Only Diagnosis (RAG Semantic Matcher)
+        if not image_file:
+            print(f"Running Standalone Symptom Diagnosis for symptoms: '{description}'...")
+            text_results = get_symptom_prediction(description)
+            if not text_results:
+                return jsonify({"error": "Symptom matching failed."}), 500
+                
+            top_1 = text_results[0]
+            
+            # If top match confidence is high, return it directly
+            if top_1["confidence"] >= 0.70:
+                final_diagnosis = {
+                    "disease": top_1["name"],
+                    "confidence": f"{top_1['confidence']*100:.0f}%",
+                    "cause": top_1["info"].get("description", ""),
+                    "treatment": top_1["info"].get("treatment", ""),
+                    "prevention": top_1["info"].get("prevention", "")
+                }
+                return generate_final_response(final_diagnosis, lang, None, None, text_results[:3], "symptoms")
+                
+            # If confidence is low, run LLM decision with RAG context
+            retrieved_context = rag_engine.retrieve_context(description, k=2)
+            top_3_str = ", ".join([f"{p['name']} ({p['confidence']*100:.0f}%)" for p in text_results[:3]])
+            
+            system_prompt = (
+                "You are an expert plant pathologist AI. The symptom matcher is uncertain. "
+                "You MUST output exactly ONE definitive disease diagnosis from the options. Do not output a list of probabilities. "
+                "If you cannot decide, pick the most likely one based on symptoms."
+            )
+            prompt = f"""
+            {system_prompt}
+            
+            Top-3 Semantic Matches: {top_3_str}
+            User Symptoms: {description}
+            Knowledge Base: {retrieved_context}
+            
+            OUTPUT FORMAT (STRICT JSON):
+            {{
+              "disease": "Definitive Disease Name",
+              "confidence": "Estimation (e.g., 65%)",
+              "cause": "Specific cause description",
+              "treatment": "Direct treatment steps",
+              "prevention": "Prevention measures"
+            }}
+            """
+            
+            print("Calling LLM for Symptom-Only Decision...")
+            try:
+                import concurrent.futures
+                
+                def call_llm():
+                    return genai_client.models.generate_content(
+                        model='gemini-1.5-flash',
+                        contents=prompt
+                    )
+                
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(call_llm)
+                    response = future.result(timeout=8)
+                    
+                print("LLM generated response successfully.")
+                result_text = response.text.replace("```json", "").replace("```", "").strip()
+                final_diagnosis = json.loads(result_text)
+            except Exception as e:
+                print(f"LLM Error during text diagnosis: {e}. Falling back to top matcher.")
+                final_diagnosis = {
+                    "disease": top_1["name"],
+                    "confidence": f"{top_1['confidence']*100:.0f}%",
+                    "cause": top_1["info"].get("description", ""),
+                    "treatment": top_1["info"].get("treatment", ""),
+                    "prevention": top_1["info"].get("prevention", "")
+                }
+                
+            return generate_final_response(final_diagnosis, lang, None, None, text_results[:3], "symptoms")
+
+        # Handle Image-based Requests (Mode 1 and Mode 3)
         filename = image_file.filename
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         image_file.save(file_path)
@@ -122,130 +300,341 @@ def diagnose():
         if not is_good:
             return jsonify({"error": quality_reason}), 400
 
-        # Execute Pipeline
-        prediction_result = get_multi_stage_prediction(file_path)
+        # Execute Pipeline with Automatic Disease Region Detection and Auto-Zoom
+        from disease_detector import detect_disease_region
+
+        detection_res = detect_disease_region(file_path, UPLOAD_FOLDER)
         
-        # Binary Early Exit (Healthy)
-        if prediction_result["stage"] == "binary" and prediction_result["diagnosis"] == "Healthy":
-            final_diagnosis = {
-                "disease": "Healthy Plant",
-                "confidence": f"{prediction_result['confidence']*100:.0f}%",
-                "cause": "No disease detected. Plant appears healthy.",
-                "treatment": "No treatment required. Continue regular maintenance.",
-                "prevention": "Maintain good hygiene and monitor regularly."
-            }
-            return generate_final_response(final_diagnosis, lang, image_url)
+        prediction_result = None
+        used_crop = False
+        full_conf = 0.0
+        crop_conf = 0.0
+        
+        # 1. Run prediction on full image
+        full_pred_res = get_multi_stage_prediction(file_path)
+        if full_pred_res["stage"] == "binary" and full_pred_res["diagnosis"] == "Healthy":
+            full_conf = full_pred_res["confidence"]
+        else:
+            full_conf = full_pred_res["top_3"][0]["confidence"]
             
-        # Disease Fallback to LLM Strategy
-        top_3 = prediction_result["top_3"]
-        top_1 = top_3[0]
-        
-        # If very confident, return the top-1 directly without confusing the user
-        if top_1["confidence"] >= 0.70:
-            final_diagnosis = {
-                "disease": top_1["name"],
-                "confidence": f"{top_1['confidence']*100:.0f}%",
-                "cause": top_1["info"].get("description", ""),
-                "treatment": top_1["info"].get("treatment", ""),
-                "prevention": top_1["info"].get("prevention", "")
-            }
-            return generate_final_response(final_diagnosis, lang, image_url)
+        # 2. Run prediction on cropped image (if disease region detected)
+        if detection_res:
+            crop_path = detection_res["croppedPath"]
+            crop_pred_res = get_multi_stage_prediction(crop_path)
             
-        # Stage 5: Hybrid Intelligent Decision System
-        # Confident < 70%, silently use LLM to choose ONE definitive diagnosis
-        query_for_rag = f"{top_1['name']} or {top_3[1]['name']}"
-        retrieved_context = rag_engine.retrieve_context(query_for_rag, k=2)
-        
-        top_3_str = ", ".join([f"{p['name']} ({p['confidence']*100:.0f}%)" for p in top_3])
-        
-        system_prompt = (
-            "You are an expert plant pathologist AI. The image CNN is uncertain. "
-            "You MUST output exactly ONE definitive disease diagnosis. Do not output a list of probabilities. "
-            "If you cannot decide, pick the most likely one based on symptoms."
-        )
-        prompt = f"""
-        {system_prompt}
-        
-        CNN Top-3 Guesses: {top_3_str}
-        User Symptoms: {description if description else 'None provided'}
-        Knowledge Base: {retrieved_context}
-        
-        OUTPUT FORMAT (STRICT JSON):
-        {{
-          "disease": "Definitive Disease Name",
-          "confidence": "Estimation (e.g., 65%)",
-          "cause": "Specific cause description",
-          "treatment": "Direct treatment steps",
-          "prevention": "Prevention measures"
-        }}
-        """
-        
-        print(f"Calling LLM for Hybrid Decision (Confidence: {top_1['confidence']:.2f})...")
-        try:
-            import concurrent.futures
-            
-            def call_llm():
-                return genai_client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=prompt
-                )
-            
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(call_llm)
-                # Hard timeout of 8 seconds for the LLM to prevent hanging
-                response = future.result(timeout=8)
+            if crop_pred_res["stage"] == "binary" and crop_pred_res["diagnosis"] == "Healthy":
+                crop_conf = crop_pred_res["confidence"]
+            else:
+                crop_conf = crop_pred_res["top_3"][0]["confidence"]
                 
-            print("LLM generated response successfully.")
-            result_text = response.text.replace("```json", "").replace("```", "").strip()
-            final_diagnosis = json.loads(result_text)
-        except concurrent.futures.TimeoutError:
-            print("LLM Request timed out! Falling back to CNN.")
-            final_diagnosis = {
-                "disease": top_1["name"],
-                "confidence": f"{top_1['confidence']*100:.0f}%",
-                "cause": top_1["info"].get("description", ""),
-                "treatment": top_1["info"].get("treatment", ""),
-                "prevention": top_1["info"].get("prevention", "")
-            }
-        except Exception as e:
-            print(f"LLM Error: {e}. Falling back to CNN.")
-            # Absolute fallback if LLM fails
-            final_diagnosis = {
-                "disease": top_1["name"],
-                "confidence": f"{top_1['confidence']*100:.0f}%",
-                "cause": top_1["info"].get("description", ""),
-                "treatment": top_1["info"].get("treatment", ""),
-                "prevention": top_1["info"].get("prevention", "")
-            }
+            # Use the prediction with the higher confidence score
+            if crop_conf > full_conf:
+                prediction_result = crop_pred_res
+                used_crop = True
+            else:
+                prediction_result = full_pred_res
+                used_crop = False
+        else:
+            prediction_result = full_pred_res
+            used_crop = False
+
+        # Build visual analysis metadata
+        detection_meta = {
+            "diseaseAreaDetected": bool(detection_res),
+            "usedCrop": used_crop,
+            "originalUrl": image_url,
+            "fullImageConfidence": f"{full_conf * 100:.0f}%",
+            "cropConfidence": f"{crop_conf * 100:.0f}%" if detection_res else "N/A",
+            "boxCoordinates": detection_res["boxCoordinates"] if detection_res else None,
+            "highlightedUrl": detection_res["highlightedUrl"] if detection_res else None,
+            "croppedUrl": detection_res["croppedUrl"] if detection_res else None,
+        }
+
+        # Initialize prediction variables
+        final_diagnosis = None
+        top3_diff = None
+        mode = "image"
+        
+        # Determine image details
+        img_is_healthy = (prediction_result["stage"] == "binary" and prediction_result["diagnosis"] == "Healthy")
+        img_class = "Healthy Plant" if img_is_healthy else prediction_result["top_3"][0]["name"]
+        img_conf = prediction_result["confidence"] if img_is_healthy else prediction_result["top_3"][0]["confidence"]
+        
+        # If symptoms description is present -> Mode 3: Image + Symptoms Fusion
+        if description:
+            mode = "hybrid"
+            print(f"Running Hybrid Image + Symptom Fusion. Description: '{description}'...")
+            text_results = get_symptom_prediction(description)
+            top3_diff = text_results[:3]
             
-        return generate_final_response(final_diagnosis, lang, image_url)
+            if text_results:
+                text_top = text_results[0]
+                text_class = text_top["name"]
+                text_conf = text_top["confidence"]
+                
+                # Add multimodal fusion details for premium frontend rendering
+                detection_meta["fusionDetails"] = {
+                    "imgClass": img_class,
+                    "imgConfidence": f"{img_conf * 100:.0f}%",
+                    "textClass": text_class,
+                    "textConfidence": f"{text_conf * 100:.0f}%",
+                    "agreement": bool(img_class == text_class),
+                    "preferred": "image" if (img_class == text_class or img_conf >= text_conf) else "text"
+                }
+                
+                # Fusion logic:
+                if img_class == text_class:
+                    # Agree: Fuse confidences (60% weight to Image, 40% weight to Text)
+                    fused_conf = 0.6 * img_conf + 0.4 * text_conf
+                    print(f"CNN and RAG agree on {img_class}. Fusing confidence: {img_conf:.2f} & {text_conf:.2f} -> {fused_conf:.2f}")
+                    
+                    if img_is_healthy:
+                        final_diagnosis = {
+                            "disease": "Healthy Plant",
+                            "confidence": f"{fused_conf*100:.0f}%",
+                            "cause": "No disease detected. Plant appears healthy.",
+                            "treatment": "No treatment required. Continue regular maintenance.",
+                            "prevention": "Maintain good hygiene and monitor regularly."
+                        }
+                    else:
+                        info = prediction_result["top_3"][0]["info"]
+                        final_diagnosis = {
+                            "disease": img_class,
+                            "confidence": f"{fused_conf*100:.0f}%",
+                            "cause": info.get("description", ""),
+                            "treatment": info.get("treatment", ""),
+                            "prevention": info.get("prevention", "")
+                        }
+                else:
+                    # Disagree: Choose the higher confidence
+                    print(f"CNN ({img_class}: {img_conf:.2f}) and RAG ({text_class}: {text_conf:.2f}) disagree.")
+                    if text_conf > img_conf:
+                        print("Selecting RAG text-based prediction (higher confidence).")
+                        final_diagnosis = {
+                            "disease": text_class,
+                            "confidence": f"{text_conf*100:.0f}%",
+                            "cause": text_top["info"].get("description", ""),
+                            "treatment": text_top["info"].get("treatment", ""),
+                            "prevention": text_top["info"].get("prevention", "")
+                        }
+                    else:
+                        print("Selecting CNN image-based prediction (higher confidence).")
+                        if img_is_healthy:
+                            final_diagnosis = {
+                                "disease": "Healthy Plant",
+                                "confidence": f"{img_conf*100:.0f}%",
+                                "cause": "No disease detected. Plant appears healthy.",
+                                "treatment": "No treatment required. Continue regular maintenance.",
+                                "prevention": "Maintain good hygiene and monitor regularly."
+                            }
+                        else:
+                            info = prediction_result["top_3"][0]["info"]
+                            final_diagnosis = {
+                                "disease": img_class,
+                                "confidence": f"{img_conf*100:.0f}%",
+                                "cause": info.get("description", ""),
+                                "treatment": info.get("treatment", ""),
+                                "prevention": info.get("prevention", "")
+                            }
+                            
+        # Mode 1: Image Only (no description provided)
+        else:
+            mode = "image"
+            if img_is_healthy:
+                final_diagnosis = {
+                    "disease": "Healthy Plant",
+                    "confidence": f"{img_conf*100:.0f}%",
+                    "cause": "No disease detected. Plant appears healthy.",
+                    "treatment": "No treatment required. Continue regular maintenance.",
+                    "prevention": "Maintain good hygiene and monitor regularly."
+                }
+            else:
+                # If very confident, return directly
+                top_1 = prediction_result["top_3"][0]
+                if top_1["confidence"] >= 0.70:
+                    final_diagnosis = {
+                        "disease": top_1["name"],
+                        "confidence": f"{top_1['confidence']*100:.0f}%",
+                        "cause": top_1["info"].get("description", ""),
+                        "treatment": top_1["info"].get("treatment", ""),
+                        "prevention": top_1["info"].get("prevention", "")
+                    }
+                else:
+                    # Run LLM Decision Strategy for Image-only low confidence
+                    query_for_rag = f"{top_1['name']} or {prediction_result['top_3'][1]['name']}"
+                    retrieved_context = rag_engine.retrieve_context(query_for_rag, k=2)
+                    top_3_str = ", ".join([f"{p['name']} ({p['confidence']*100:.0f}%)" for p in prediction_result["top_3"]])
+                    
+                    system_prompt = (
+                        "You are an expert plant pathologist AI. The image CNN is uncertain. "
+                        "You MUST output exactly ONE definitive disease diagnosis from the options. Do not output a list of probabilities. "
+                        "If you cannot decide, pick the most likely one based on symptoms."
+                    )
+                    prompt = f"""
+                    {system_prompt}
+                    
+                    CNN Top-3 Guesses: {top_3_str}
+                    User Symptoms: None provided
+                    Knowledge Base: {retrieved_context}
+                    
+                    OUTPUT FORMAT (STRICT JSON):
+                    {{
+                      "disease": "Definitive Disease Name",
+                      "confidence": "Estimation (e.g., 65%)",
+                      "cause": "Specific cause description",
+                      "treatment": "Direct treatment steps",
+                      "prevention": "Prevention measures"
+                    }}
+                    """
+                    
+                    print("Calling LLM for Image-Only Decision...")
+                    try:
+                        import concurrent.futures
+                        
+                        def call_llm():
+                            return genai_client.models.generate_content(
+                                model='gemini-1.5-flash',
+                                contents=prompt
+                            )
+                        
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(call_llm)
+                            response = future.result(timeout=8)
+                            
+                        print("LLM generated response successfully.")
+                        result_text = response.text.replace("```json", "").replace("```", "").strip()
+                        final_diagnosis = json.loads(result_text)
+                    except Exception as e:
+                        print(f"LLM Error: {e}. Falling back to top CNN prediction.")
+                        final_diagnosis = {
+                            "disease": top_1["name"],
+                            "confidence": f"{top_1['confidence']*100:.0f}%",
+                            "cause": top_1["info"].get("description", ""),
+                            "treatment": top_1["info"].get("treatment", ""),
+                            "prevention": top_1["info"].get("prevention", "")
+                        }
+                        
+        return generate_final_response(final_diagnosis, lang, image_url, detection_meta, top3_diff, mode)
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Diagnosis failed: {str(e)}"}), 500
 
-def generate_final_response(final_diagnosis, lang, image_url):
-    # Translate Final Result
+def translate_value(val, lang):
+    if not val or lang == 'en':
+        return val
+    if isinstance(val, str):
+        return translate_text(val, lang)
+    elif isinstance(val, list):
+        return [translate_value(item, lang) for item in val]
+    elif isinstance(val, dict):
+        return {k: translate_value(v, lang) for k, v in val.items()}
+    return val
+
+def generate_final_response(final_diagnosis, lang, image_url, detection_meta=None, top3_diff=None, mode="image"):
+    # Lookup scientific metadata
+    disease_name = final_diagnosis.get("disease", "")
+    rag_meta = rag_engine.retrieve_metadata(disease_name)
+    
+    if rag_meta:
+        final_diagnosis["scientific_name"] = rag_meta.get("scientific_name", "")
+        final_diagnosis["fungicides"] = rag_meta.get("fungicides", [])
+        final_diagnosis["pesticides"] = rag_meta.get("pesticides", [])
+        final_diagnosis["recovery_timeline"] = rag_meta.get("recovery_timeline", "")
+        final_diagnosis["reference_sources"] = rag_meta.get("reference_sources", "")
+        
+        # Override cause, treatment, prevention with RAG database content
+        if rag_meta.get("causes"):
+            final_diagnosis["cause"] = rag_meta.get("causes")
+        if rag_meta.get("treatment"):
+            final_diagnosis["treatment"] = rag_meta.get("treatment")
+        if rag_meta.get("prevention"):
+            final_diagnosis["prevention"] = rag_meta.get("prevention")
+
+    # Determine dynamic severity based on confidence
+    conf_str = final_diagnosis.get("confidence", "50%")
+    import re
+    digits = re.findall(r'\d+', str(conf_str))
+    conf_val = float(digits[0]) / 100.0 if digits else 0.5
+    
+    if conf_val < 0.50:
+        severity = "Low"
+        severity_action = "Low severity. Monitor the plant closely and implement preventive cultural practices."
+    elif conf_val < 0.75:
+        severity = "Medium"
+        severity_action = "Medium severity. Implement early treatment protocols and physical removal of infected leaves."
+    elif conf_val < 0.90:
+        severity = "High"
+        severity_action = "High severity. Active pathogen spread. Initiate target chemical treatments and isolate infected crops."
+    else:
+        severity = "Critical"
+        severity_action = "Critical severity. Severe infestation. Immediate physical quarantine, destroy heavily infected plants, and apply systemic crop protection."
+
+    final_diagnosis["severity"] = severity
+    final_diagnosis["severity_action"] = severity_action
+
+    # Translate final_diagnosis if lang != 'en'
+    translated_diagnosis = {}
     if lang != 'en':
-        for key in final_diagnosis:
-            if key != 'confidence':
-                final_diagnosis[key] = translate_text(final_diagnosis[key], lang)
+        for key, val in final_diagnosis.items():
+            if key == 'confidence':
+                translated_diagnosis[key] = val
+            elif key == 'scientific_name':
+                # Don't translate scientific botanical name
+                translated_diagnosis[key] = val
+            else:
+                translated_diagnosis[key] = translate_value(val, lang)
+        
+        # Translate fusion details if present
+        if detection_meta and "fusionDetails" in detection_meta:
+            fd = detection_meta["fusionDetails"]
+            if fd.get("imgClass"):
+                fd["imgClass"] = translate_text(fd["imgClass"], lang)
+            if fd.get("textClass"):
+                fd["textClass"] = translate_text(fd["textClass"], lang)
+    else:
+        translated_diagnosis = final_diagnosis.copy()
     
     prediction_shim = {
-        "name": final_diagnosis.get("disease"),
-        "severity": "Medium",
-        "description": final_diagnosis.get("cause"),
-        "treatment": final_diagnosis.get("treatment"),
-        "prevention": final_diagnosis.get("prevention")
+        "name": translated_diagnosis.get("disease"),
+        "scientific_name": translated_diagnosis.get("scientific_name", ""),
+        "severity": translated_diagnosis.get("severity", "Medium"),
+        "severity_action": translated_diagnosis.get("severity_action", ""),
+        "description": translated_diagnosis.get("cause"),
+        "treatment": translated_diagnosis.get("treatment"),
+        "prevention": translated_diagnosis.get("prevention"),
+        "fungicides": translated_diagnosis.get("fungicides", []),
+        "pesticides": translated_diagnosis.get("pesticides", []),
+        "recovery_timeline": translated_diagnosis.get("recovery_timeline", ""),
+        "reference_sources": translated_diagnosis.get("reference_sources", "")
     }
     
-    return jsonify({
+    res = {
         "status": "success",
-        "diagnosis": final_diagnosis,
+        "diagnosis": translated_diagnosis,
         "prediction": prediction_shim,
-        "imageUrl": image_url
-    })
+        "imageUrl": image_url,
+        "mode": mode
+    }
+    if detection_meta:
+        res.update(detection_meta)
+        
+    if top3_diff:
+        translated_diff = []
+        for d in top3_diff:
+            name = d["name"]
+            if lang != 'en':
+                name = translate_text(name, lang)
+            conf_val = d['confidence']
+            conf_str = f"{conf_val * 100:.0f}%" if isinstance(conf_val, float) else str(conf_val)
+            translated_diff.append({
+                "name": name,
+                "confidence": conf_str
+            })
+        res["top3Differential"] = translated_diff
+        
+    return jsonify(res)
 
 @app.route("/api/translate", methods=['POST'])
 def translate():
@@ -360,13 +749,16 @@ def generate_single_report_pdf(data):
     treatment = diagnosis.get('treatment', 'N/A')
     prevention = diagnosis.get('prevention', 'N/A')
     image_url = data.get('imageUrl', '')
+    scientific_name = diagnosis.get('scientific_name', '')
     
+    disease_name_with_sci = f"{disease_name} (<i>{scientific_name}</i>)" if scientific_name else disease_name
+
     date_str = time.strftime("%Y-%m-%d %H:%M:%S")
     report_id = f"AGR-{int(time.time())}"
     
     meta_data = [
         [Paragraph(f"<b>Date Generated:</b> {date_str}", meta_style), Paragraph(f"<b>Report ID:</b> {report_id}", meta_style)],
-        [Paragraph(f"<b>Specimen Diagnosis:</b> {disease_name}", meta_style), Paragraph(f"<b>System Confidence:</b> {confidence}", meta_style)]
+        [Paragraph(f"<b>Specimen Diagnosis:</b> {disease_name_with_sci}", meta_style), Paragraph(f"<b>System Confidence:</b> {confidence}", meta_style)]
     ]
     meta_table = Table(meta_data, colWidths=[266, 266])
     meta_table.setStyle(TableStyle([
@@ -390,7 +782,7 @@ def generate_single_report_pdf(data):
     if image_element:
         right_p = [
             Paragraph("DIAGNOSTIC INSIGHTS", h2_style),
-            Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')),
+            Paragraph(f"<b>Diagnosis:</b> {disease_name_with_sci}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')),
             Spacer(1, 8),
             Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')),
             Paragraph(cause, body_style)
@@ -403,7 +795,7 @@ def generate_single_report_pdf(data):
         story.append(main_table)
     else:
         story.append(Paragraph("DIAGNOSTIC INSIGHTS", h2_style))
-        story.append(Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')))
+        story.append(Paragraph(f"<b>Diagnosis:</b> {disease_name_with_sci}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')))
         story.append(Spacer(1, 8))
         story.append(Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')))
         story.append(Paragraph(cause, body_style))
@@ -431,6 +823,74 @@ def generate_single_report_pdf(data):
     ]))
     story.append(proto_table)
     
+    # Recommended chemical protocols
+    fungicides = diagnosis.get('fungicides', [])
+    pesticides = diagnosis.get('pesticides', [])
+    recovery_timeline = diagnosis.get('recovery_timeline', '')
+    reference_sources = diagnosis.get('reference_sources', '')
+    
+    if fungicides or pesticides or recovery_timeline:
+        story.append(Spacer(1, 15))
+        story.append(Paragraph("SCIENTIFIC CHEMICAL ACTION PROTOCOLS", h2_style))
+        if recovery_timeline:
+            story.append(Paragraph(f"<b>Expected Recovery Timeline:</b> {recovery_timeline}", body_style))
+            story.append(Spacer(1, 5))
+            
+        chemical_rows = []
+        chemical_rows.append([
+            Paragraph("<b>Category</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+            Paragraph("<b>Chemical Name</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+            Paragraph("<b>Active Ingredient</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+            Paragraph("<b>Mode of Action</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+            Paragraph("<b>Dosage</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+            Paragraph("<b>Frequency</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5))
+        ])
+        
+        for f in fungicides:
+            chemical_rows.append([
+                Paragraph("Fungicide", body_style),
+                Paragraph(f.get('name', ''), body_style),
+                Paragraph(f.get('active_ingredient', ''), body_style),
+                Paragraph(f.get('mode_of_action', ''), body_style),
+                Paragraph(f.get('dosage', ''), body_style),
+                Paragraph(f.get('frequency', ''), body_style)
+            ])
+            
+        for p in pesticides:
+            chemical_rows.append([
+                Paragraph("Pesticide", body_style),
+                Paragraph(p.get('name', ''), body_style),
+                Paragraph(p.get('active_ingredient', ''), body_style),
+                Paragraph(p.get('mode_of_action', ''), body_style),
+                Paragraph(p.get('dosage', ''), body_style),
+                Paragraph(p.get('frequency', ''), body_style)
+            ])
+            
+        if len(chemical_rows) > 1:
+            chem_table = Table(chemical_rows, colWidths=[65, 80, 100, 110, 80, 97])
+            chem_table.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f1f5f9")),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+                ('PADDING', (0,0), (-1,-1), 5),
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ]))
+            story.append(chem_table)
+            story.append(Spacer(1, 10))
+            
+        if reference_sources:
+            story.append(Paragraph(f"<b>Scientific References:</b> {reference_sources}", ParagraphStyle('Ref', parent=body_style, fontSize=8, textColor=colors.HexColor("#64748b"))))
+            story.append(Spacer(1, 5))
+            
+        safety_style = ParagraphStyle(
+            'SafetyWarning',
+            parent=body_style,
+            fontName='Helvetica-BoldOblique',
+            fontSize=8,
+            textColor=colors.HexColor("#b91c1c")
+        )
+        story.append(Paragraph("SAFETY NOTICE: Always follow local agricultural regulations and label instructions before applying any chemical treatment.", safety_style))
+        story.append(Spacer(1, 5))
+
     story.append(Spacer(1, 20))
     story.append(Table([[""]], colWidths=[532], rowHeights=[1], style=TableStyle([('BACKGROUND', (0,0), (-1,-1), border_color)])))
     story.append(Spacer(1, 8))
@@ -575,8 +1035,11 @@ def generate_vault_report_pdf(items):
         prevention = diagnosis.get('prevention', 'N/A')
         image_url = res.get('imageUrl', '')
         timestamp = item.get('timestamp', 'N/A')
+        scientific_name = diagnosis.get('scientific_name', '')
         
-        story.append(Paragraph(f"Case Report #{idx + 1} — {disease_name}", title_style))
+        disease_name_with_sci = f"{disease_name} (<i>{scientific_name}</i>)" if scientific_name else disease_name
+        
+        story.append(Paragraph(f"Case Report #{idx + 1} — {disease_name_with_sci}", title_style))
         story.append(Table([[""]], colWidths=[532], rowHeights=[2], style=TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), primary_color),
             ('PADDING', (0,0), (-1,-1), 0),
@@ -585,7 +1048,7 @@ def generate_vault_report_pdf(items):
         
         meta_data = [
             [Paragraph(f"<b>Scan Date:</b> {timestamp}", meta_style), Paragraph(f"<b>Case ID:</b> AGR-VLT-{item.get('id', idx)}", meta_style)],
-            [Paragraph(f"<b>Diagnosis Status:</b> {disease_name}", meta_style), Paragraph(f"<b>System Confidence:</b> {confidence}", meta_style)]
+            [Paragraph(f"<b>Diagnosis Status:</b> {disease_name_with_sci}", meta_style), Paragraph(f"<b>System Confidence:</b> {confidence}", meta_style)]
         ]
         meta_table = Table(meta_data, colWidths=[266, 266])
         meta_table.setStyle(TableStyle([
@@ -609,7 +1072,7 @@ def generate_vault_report_pdf(items):
         if image_element:
             right_p = [
                 Paragraph("DIAGNOSTIC INSIGHTS", h2_style),
-                Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')),
+                Paragraph(f"<b>Diagnosis:</b> {disease_name_with_sci}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')),
                 Spacer(1, 8),
                 Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')),
                 Paragraph(cause, body_style)
@@ -622,7 +1085,7 @@ def generate_vault_report_pdf(items):
             story.append(main_table)
         else:
             story.append(Paragraph("DIAGNOSTIC INSIGHTS", h2_style))
-            story.append(Paragraph(f"<b>Diagnosis:</b> {disease_name}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')))
+            story.append(Paragraph(f"<b>Diagnosis:</b> {disease_name_with_sci}", ParagraphStyle('Diag', parent=body_style, fontSize=12, leading=15, textColor=primary_color, fontName='Helvetica-Bold')))
             story.append(Spacer(1, 8))
             story.append(Paragraph("<b>Symptom & Cause Analysis:</b>", ParagraphStyle('BoldText', parent=body_style, fontName='Helvetica-Bold')))
             story.append(Paragraph(cause, body_style))
@@ -649,7 +1112,75 @@ def generate_vault_report_pdf(items):
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ]))
         story.append(proto_table)
+
+        # Recommended chemical protocols
+        fungicides = diagnosis.get('fungicides', [])
+        pesticides = diagnosis.get('pesticides', [])
+        recovery_timeline = diagnosis.get('recovery_timeline', '')
+        reference_sources = diagnosis.get('reference_sources', '')
         
+        if fungicides or pesticides or recovery_timeline:
+            story.append(Spacer(1, 15))
+            story.append(Paragraph("SCIENTIFIC CHEMICAL ACTION PROTOCOLS", h2_style))
+            if recovery_timeline:
+                story.append(Paragraph(f"<b>Expected Recovery Timeline:</b> {recovery_timeline}", body_style))
+                story.append(Spacer(1, 5))
+                
+            chemical_rows = []
+            chemical_rows.append([
+                Paragraph("<b>Category</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+                Paragraph("<b>Chemical Name</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+                Paragraph("<b>Active Ingredient</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+                Paragraph("<b>Mode of Action</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+                Paragraph("<b>Dosage</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5)),
+                Paragraph("<b>Frequency</b>", ParagraphStyle('ChemH', parent=body_style, fontName='Helvetica-Bold', fontSize=8.5))
+            ])
+            
+            for f in fungicides:
+                chemical_rows.append([
+                    Paragraph("Fungicide", body_style),
+                    Paragraph(f.get('name', ''), body_style),
+                    Paragraph(f.get('active_ingredient', ''), body_style),
+                    Paragraph(f.get('mode_of_action', ''), body_style),
+                    Paragraph(f.get('dosage', ''), body_style),
+                    Paragraph(f.get('frequency', ''), body_style)
+                ])
+                
+            for p in pesticides:
+                chemical_rows.append([
+                    Paragraph("Pesticide", body_style),
+                    Paragraph(p.get('name', ''), body_style),
+                    Paragraph(p.get('active_ingredient', ''), body_style),
+                    Paragraph(p.get('mode_of_action', ''), body_style),
+                    Paragraph(p.get('dosage', ''), body_style),
+                    Paragraph(p.get('frequency', ''), body_style)
+                ])
+                
+            if len(chemical_rows) > 1:
+                chem_table = Table(chemical_rows, colWidths=[65, 80, 100, 110, 80, 97])
+                chem_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f1f5f9")),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+                    ('PADDING', (0,0), (-1,-1), 5),
+                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ]))
+                story.append(chem_table)
+                story.append(Spacer(1, 10))
+                
+            if reference_sources:
+                story.append(Paragraph(f"<b>Scientific References:</b> {reference_sources}", ParagraphStyle('Ref', parent=body_style, fontSize=8, textColor=colors.HexColor("#64748b"))))
+                story.append(Spacer(1, 5))
+                
+            safety_style = ParagraphStyle(
+                'SafetyWarning',
+                parent=body_style,
+                fontName='Helvetica-BoldOblique',
+                fontSize=8,
+                textColor=colors.HexColor("#b91c1c")
+            )
+            story.append(Paragraph("SAFETY NOTICE: Always follow local agricultural regulations and label instructions before applying any chemical treatment.", safety_style))
+            story.append(Spacer(1, 5))
+            
         story.append(Spacer(1, 20))
         story.append(Table([[""]], colWidths=[532], rowHeights=[1], style=TableStyle([('BACKGROUND', (0,0), (-1,-1), border_color)])))
         story.append(Spacer(1, 8))

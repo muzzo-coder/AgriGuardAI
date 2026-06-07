@@ -55,6 +55,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ items, onSelect, onClear })
             onClick={onClear}
             className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all"
             title={t('history_clear')}
+            aria-label="Clear all scan history"
           >
             <Trash2 size={16} />
           </button>
@@ -82,12 +83,17 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ items, onSelect, onClear })
                 onClick={() => onSelect(item)}
                 className="w-full group flex items-center gap-4 p-4 rounded-2xl border border-gray-50 dark:border-gray-800/40 hover:border-teal-200/50 dark:hover:border-teal-900/40 hover:bg-teal-50/20 dark:hover:bg-teal-950/10 transition-all text-left shadow-sm bg-white dark:bg-gray-900/20"
               >
-                <div className="w-14 h-14 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shrink-0 shadow-inner">
-                  <img 
-                    src={import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}${item.result.imageUrl}` : `http://localhost:8080${item.result.imageUrl}`} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 grayscale-[0.2] group-hover:grayscale-0" 
-                    alt="Scan thumbnail" 
-                  />
+                <div className="w-14 h-14 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shrink-0 shadow-inner flex items-center justify-center bg-gray-50 dark:bg-gray-850">
+                  {item.result.imageUrl ? (
+                    <img 
+                      src={import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}${item.result.imageUrl}` : `http://localhost:8088${item.result.imageUrl}`} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700 grayscale-[0.2] group-hover:grayscale-0" 
+                      alt="Scan thumbnail" 
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Database className="text-teal-600 dark:text-teal-400 w-5 h-5 group-hover:scale-110 transition-transform" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-[11px] font-black text-gray-800 dark:text-gray-200 truncate leading-none mb-2 uppercase tracking-tight font-heading">

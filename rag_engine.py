@@ -26,11 +26,21 @@ class RAGEngine:
         self.documents = []
         for item in data:
             # Combine fields into a single searchable string
+            fungicides_list = item.get('fungicides', [])
+            pesticides_list = item.get('pesticides', [])
+            fungicides_str = ", ".join([f"{f.get('name')} ({f.get('active_ingredient')})" for f in fungicides_list]) if fungicides_list else ""
+            pesticides_str = ", ".join([f"{p.get('name')} ({p.get('active_ingredient')})" for p in pesticides_list]) if pesticides_list else ""
+            
             text = f"Disease: {item.get('disease')}\n" \
+                   f"Scientific Name: {item.get('scientific_name', '')}\n" \
                    f"Symptoms: {item.get('symptoms')}\n" \
                    f"Causes: {item.get('causes')}\n" \
                    f"Treatment: {item.get('treatment')}\n" \
+                   f"Fungicides: {fungicides_str}\n" \
+                   f"Pesticides: {pesticides_str}\n" \
                    f"Prevention: {item.get('prevention')}\n" \
+                   f"Recovery Timeline: {item.get('recovery_timeline', '')}\n" \
+                   f"Reference Sources: {item.get('reference_sources', '')}\n" \
                    f"Tips: {item.get('additional_tips', '')}"
             self.documents.append({
                 "text": text,
@@ -99,6 +109,41 @@ class RAGEngine:
         
         # Proper robust join
         return "\n\n---\n\n".join([str(res) for res in results])
+
+    def retrieve_metadata(self, query, k=1):
+        if not self.index or not self.documents:
+            return None
+
+        query_str = str(query) if isinstance(query, dict) else query
+        query_str = str(query_str).strip()
+        if not query_str:
+            return None
+
+        # Try exact or normalized disease name matching first
+        norm_query = query_str.replace("_", " ").lower()
+        if "healthy" in norm_query:
+            for doc in self.documents:
+                disease_name = doc['metadata'].get('disease', '')
+                if "healthy" in disease_name.lower():
+                    return doc['metadata']
+        for doc in self.documents:
+            disease_name = doc['metadata'].get('disease', '')
+            if disease_name.replace("_", " ").lower() == norm_query:
+                return doc['metadata']
+
+        # Fallback to semantic search
+        if query_str in self.embedding_cache:
+            query_embedding = self.embedding_cache[query_str]
+        else:
+            query_embedding = self.model.encode([query_str])
+            self.embedding_cache[query_str] = query_embedding
+
+        distances, indices = self.index.search(np.array(query_embedding).astype('float32'), k)
+        
+        if len(indices) > 0 and indices[0][0] != -1 and indices[0][0] < len(self.documents):
+            return self.documents[indices[0][0]]['metadata']
+        
+        return None
 
 # Initialize a global instance for singleton-like usage in Flask
 rag_engine = RAGEngine()

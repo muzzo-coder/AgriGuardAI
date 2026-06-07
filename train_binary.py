@@ -48,7 +48,7 @@ def load_balanced_subset(split_dir, samples_per_class=2000):
     for class_idx, class_name in enumerate(classes):
         class_dir = os.path.join(split_dir, class_name)
         if not os.path.exists(class_dir):
-            continue
+         continue
         all_files = [os.path.join(class_dir, f) for f in os.listdir(class_dir) if f.endswith(('.jpg', '.png'))]
         # Keep deterministic order but sample evenly
         random.seed(42)

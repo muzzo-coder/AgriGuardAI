@@ -277,7 +277,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
 
   return (
     <div id="upload-section" className="w-full max-w-5xl mx-auto space-y-12 relative z-20 perspective-[2000px]">
-      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+      <input type="file" id="leaf-file-input" aria-label="Upload leaf image file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
 
       <div 
         className={`card-clean overflow-hidden transition-all duration-500 transform-gpu ${isDragging ? 'scale-[1.02] border-emerald-500/50 shadow-emerald-500/20' : 'scale-100'} ${isLoading ? 'opacity-50 pointer-events-none blur-sm' : ''}`}
@@ -305,7 +305,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                             <canvas ref={canvasRef} className="hidden" />
                         </div>
                         <div className="flex justify-center gap-4">
-                            <button onClick={stopCamera} className="btn-secondary rounded-2xl w-14 h-14 flex items-center justify-center p-0"><X size={24} /></button>
+                            <button onClick={stopCamera} className="btn-secondary rounded-2xl w-14 h-14 flex items-center justify-center p-0" aria-label="Close Camera"><X size={24} /></button>
                             <button onClick={captureImage} disabled={isCameraInitializing} className="btn-primary rounded-2xl px-8 flex items-center gap-4 shadow-xl shadow-teal-500/20 disabled:opacity-50"><Camera size={20} /> Capture</button>
                         </div>
                     </motion.div>
@@ -313,7 +313,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                     <motion.div key="preview" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6 flex flex-col items-center">
                         <div className="relative group w-full max-w-sm aspect-square bg-gray-100 dark:bg-gray-800 rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800">
                             <img src={preview!} className="w-full h-full object-cover" alt="Specimen Preview" />
-                            <button onClick={clearFile} className="absolute top-4 right-4 p-3 bg-gray-950/40 hover:bg-red-600 text-white rounded-2xl backdrop-blur-xl transition-all shadow-xl"><X size={20} /></button>
+                            <button onClick={clearFile} className="absolute top-4 right-4 p-3 bg-gray-950/40 hover:bg-red-600 text-white rounded-2xl backdrop-blur-xl transition-all shadow-xl" aria-label="Remove Specimen Image"><X size={20} /></button>
                         </div>
                         <div className="flex flex-col sm:flex-row items-center gap-3">
                             <div className="flex items-center gap-3 text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest bg-teal-50 dark:bg-teal-900/30 px-4 py-3 rounded-xl">
@@ -356,6 +356,8 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                     </div>
                     
                     <textarea 
+                        id="symptom-description"
+                        aria-label="Symptom Description text area"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder={t('symptom_placeholder')}
@@ -404,15 +406,27 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
                 <div className="relative z-10 space-y-4 pt-2">
                     <div className="flex items-center gap-4 text-sm">
                         <Loader2 className={`w-4 h-4 ${processStep === 0 ? 'text-emerald-500 animate-spin' : 'text-emerald-500/30'}`} />
-                        <span className={processStep === 0 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>Uploading image to neural network...</span>
+                        <span className={processStep === 0 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>
+                          {file 
+                            ? 'Uploading image to neural network...' 
+                            : 'Encoding symptoms into semantic space...'
+                          }
+                        </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                         <Loader2 className={`w-4 h-4 ${processStep === 1 ? 'text-emerald-500 animate-spin' : 'text-zinc-300 dark:text-zinc-700'}`} />
-                        <span className={processStep === 1 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>Running CNN diagnosis...</span>
+                        <span className={processStep === 1 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>
+                          {file 
+                            ? 'Running CNN diagnosis...' 
+                            : 'Querying agricultural knowledge base...'
+                          }
+                        </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                         <Loader2 className={`w-4 h-4 ${processStep === 2 ? 'text-emerald-500 animate-spin' : 'text-zinc-300 dark:text-zinc-700'}`} />
-                        <span className={processStep === 2 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>Synthesizing treatment plan via LLM...</span>
+                        <span className={processStep === 2 ? 'text-zinc-900 dark:text-white font-semibold' : 'text-zinc-400 dark:text-zinc-500'}>
+                          Synthesizing treatment plan via LLM...
+                        </span>
                     </div>
                 </div>
             </motion.div>
@@ -446,7 +460,7 @@ const Uploader: React.FC<UploaderProps> = ({ onResult, onReset }) => {
 
       <AnimatePresence>
         {error && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-[2rem] flex items-center gap-6 shadow-xl">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-[2rem] flex items-center gap-6 shadow-xl" role="alert" aria-live="polite">
             <AlertCircle size={24} className="text-red-600 shrink-0" />
             <p className="text-xs font-black uppercase tracking-tight text-red-800 dark:text-red-400">{error}</p>
           </motion.div>

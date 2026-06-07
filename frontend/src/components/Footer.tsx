@@ -45,10 +45,10 @@ const Footer: React.FC = () => {
               {t('footer_brand_tagline')}
             </p>
             <div className="flex gap-4 pt-2">
-               <a href="https://www.linkedin.com/in/mujjamil-sofi/" target="_blank" rel="noopener noreferrer" className="p-3 bg-zinc-50 dark:bg-[#121214] border border-black/5 dark:border-white/5 rounded-xl text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/30 transition-all shadow-sm">
+               <a href="https://www.linkedin.com/in/mujjamil-sofi/" target="_blank" rel="noopener noreferrer" className="p-3 bg-zinc-50 dark:bg-[#121214] border border-black/5 dark:border-white/5 rounded-xl text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/30 transition-all shadow-sm" aria-label="LinkedIn profile of developer Mujjamil Sofi">
                  <Share2 size={18} />
                </a>
-               <a href="#" className="p-3 bg-zinc-50 dark:bg-[#121214] border border-black/5 dark:border-white/5 rounded-xl text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/30 transition-all shadow-sm">
+               <a href="#" className="p-3 bg-zinc-50 dark:bg-[#121214] border border-black/5 dark:border-white/5 rounded-xl text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/30 transition-all shadow-sm" aria-label="Official Website Link">
                  <Globe size={18} />
                </a>
             </div>
