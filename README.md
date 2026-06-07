@@ -4,7 +4,7 @@
 
 **Intelligent Plant Disease Diagnostic System**
 
-*Empowering global agriculture with state-of-the-art Deep Learning and AI-driven insights.*
+*Empowering global agriculture with state-of-the-art Deep Learning, Vector Search (RAG), and Multimodal AI-driven insights.*
 
 [![GitHub License](https://img.shields.io/github/license/muzzo-coder/AgriGuardAI?style=flat-square&color=00b4b6)](https://github.com/muzzo-coder/AgriGuardAI)
 [![Frontend Status](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue?style=flat-square)](https://react.dev/)
@@ -19,53 +19,88 @@
 <br>
 
 ### 🌍 Why This Project Matters
-Every year, crop diseases cost the global agricultural economy billions of dollars, directly impacting food security and farmer livelihoods. **AgriGuard AI** solves this problem by bringing enterprise-grade machine learning directly to the field. By snapping a quick photo, farmers and agricultural experts can instantly diagnose plant pathogens, preventing widespread crop loss before it happens.
+Every year, crop pathogens and leaf diseases cost the global agricultural economy billions of dollars, directly threatening food security and farmers' livelihoods. **AgriGuard AI** bridges this gap by bringing enterprise-grade machine learning and localized diagnostics directly to the field. By uploading a photo or typing symptoms, farmers can instantly diagnose crop issues, retrieve scientific remediation protocols, and export clinical case reports.
 
 ---
 
 ## 1. 📖 Overview
-AgriGuard AI is a premium, full-stack SaaS-inspired application designed to bridge the gap between advanced artificial intelligence and practical agriculture. Built with a modern React frontend and a powerful Flask + TensorFlow backend, it uses Transfer Learning (ResNet50) to deliver highly accurate predictions and treatment recommendations.
+AgriGuard AI is a premium, full-stack crop-health platform featuring a dual-stage neural network classifier, semantic vector retrieval (RAG), and a multimodal LLM decision corrector. Built with a modern, responsive React interface and a modular Flask backend, the system identifies plant leaf pathogens and provides localized chemical, organic, and prevention guides in multiple languages.
 
-## 2. ✨ Features
-- 📸 **Precision Diagnostics**: Instant disease classification via image upload with >85% real-world accuracy.
-- 🤖 **Gemini AI Integration**: An intelligent, context-aware chatbot offering organic treatment plans and mitigation strategies.
-- 🌍 **Global Localization**: Native multi-language support (English, Hindi, Marathi) with real-time translation powered by `deep-translator`.
-- 🌓 **Adaptive UI**: Beautiful, fully responsive React interface featuring smooth animations, glassmorphism, and Dark Mode.
-- 🛡️ **Confidence Thresholding**: Built-in uncertainty detection to prevent misdiagnosis of unrecognized pathogens.
-- 📊 **Diagnostic History**: Persistent local storage to track and review previous crop scans.
+---
+
+## 2. ✨ Premium Features
+- 📸 **Quality Filtering**: Instant leaf detection and quality assurance (checks glare, blur, and leaf presence) to ensure accurate scans.
+- 🔍 **Auto-Zoom Region Detector**: Uses OpenCV to isolate leaves, locate disease spots, highlight them with bounding boxes, and evaluate cropped close-ups to maximize prediction accuracy.
+- 🧠 **Multi-Stage Neural Net Pipeline**:
+  - **Stage 1**: Binary classifier (Healthy vs. Diseased) to fast-track healthy leaf early exits.
+  - **Stage 2**: Deep CNN Classifier identifying specific plant pathogens.
+- ⚡ **RAG Semantic Search (FAISS)**: Uses SentenceTransformers and Facebook AI Similarity Search (FAISS) to map symptoms and diseases to a comprehensive crop-health database.
+- 🧬 **Multimodal Fusion & LLM Correction**: 
+  - Fuses CNN image probability with symptom descriptions using a weighted hybrid model.
+  - Corrects low-confidence predictions using **Google Gemini 1.5 Flash** with retrieved vector context.
+- 📝 **Symptom-Only Standalone Mode**: Allows text-based symptom searches when no image is available.
+- 📄 **Clinical PDF Exports**: Export individual diagnostic sheets or the entire crop diagnosis history vault as beautifully formatted PDF reports (via ReportLab).
+- 🌍 **Global Localization**: Multi-language UI supports English, Hindi, and Marathi with real-time translation powered by `deep-translator`.
+- 📊 **Local Scan History**: Tracks all previous diagnoses locally on your device with persistent storage.
+
+---
 
 ## 3. 🛠️ Tech Stack
 
 | Domain | Technologies |
 | :--- | :--- |
-| **Frontend** | React (TypeScript), Vite, Tailwind CSS v4, Framer Motion, Lucide React, i18next |
-| **Backend** | Python, Flask, Flask-CORS, deep-translator |
-| **Machine Learning** | TensorFlow, Keras, ResNet50 (Transfer Learning), Scikit-learn, OpenCV |
-| **Generative AI** | Google Gemini 1.5 Flash (RAG & Chatbot inference) |
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS v4, Framer Motion, Lucide Icons, i18next |
+| **Backend** | Python 3, Flask, Flask-CORS, ReportLab (PDF engine), deep-translator |
+| **Machine Learning** | TensorFlow 2, Keras, ResNet50 (Transfer Learning), Scikit-learn, OpenCV |
+| **Generative AI & RAG** | Google Gemini 1.5 Flash, SentenceTransformers (`all-MiniLM-L6-v2`), FAISS (Vector Database) |
+
+---
 
 ## 4. 🧠 Architecture Flow
+
 ```text
-[ Farmer / User ]
-       │
-       ▼
-┌─────────────────────────┐
-│  React UI (Vite)        │ ──(i18n Localization)──▶ [ UI Elements Translated ]
-│  - Image Upload         │
-│  - Webcam Capture       │
-└─────────┬───────────────┘
-          │ (REST API via Axios)
-          ▼
-┌─────────────────────────┐
-│  Flask Backend API      │
-│                         │
-│  1. Image Preprocessing ├──▶ [ ResNet50 Model (model.h5) ] ──▶ [ Confidence Score ]
-│     (224x224 Resize)    │
-│                         │
-│  2. GenAI Engine        ├──▶ [ Google Gemini API ] ──▶ [ Chatbot / Treatments ]
-│                         │
-│  3. Translation Service ├──▶ [ Deep-Translator ] ──▶ [ Localized Output ]
-└─────────────────────────┘
+                          [ User Input: Image and/or Symptoms ]
+                                            │
+                                            ▼
+                                ┌───────────────────────┐
+                                │   Leaf Quality Filter │ ──(Invalid)──▶ [ Reject / Try Again ]
+                                └───────────┬───────────┘
+                                            │ (Valid)
+                                            ▼
+                                ┌───────────────────────┐
+                                │ Auto-Zoom OpenCV Spot │
+                                │   Disease Detector    │ ──(Cropped & Highlighted Images)
+                                └───────────┬───────────┘
+                                            │
+                                            ▼
+                                ┌───────────────────────┐
+                                │ Healthy vs Diseased   │ ──(Healthy)──▶ [ Healthy Early Exit ]
+                                │  Binary Classification│
+                                └───────────┬───────────┘
+                                            │ (Diseased)
+                                            ▼
+                                ┌───────────────────────┐
+                                │ Disease Classifier    │ ──(Top-3 Sorted Confidence)
+                                └───────────┬───────────┘
+                                            │
+                                            ▼
+                                ┌───────────────────────┐
+                                │  RAG & Vector Search  │ ◀──(Query)─── [ FAISS Database ]
+                                └───────────┬───────────┘
+                                            │
+                                            ▼
+                                ┌───────────────────────┐
+                                │   Gemini Hybrid LLM   │ ──(Low Confidence / Symptom Fusion)
+                                │  Multimodal Decision  │
+                                └───────────┬───────────┘
+                                            │
+                                            ▼
+                                ┌───────────────────────┐
+                                │ Localized Response    │ ──▶ [ PDF Case / Vault Reports ]
+                                └───────────────────────┘
 ```
+
+---
 
 ## 5. ⚙️ Installation Guide
 
@@ -80,19 +115,20 @@ git clone https://github.com/muzzo-coder/AgriGuardAI.git
 cd AgriGuardAI
 
 # 2. Create and activate a virtual environment
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # 3. Install Python dependencies
 pip install -r requirements.txt
 
 # 4. Configure Environment Variables
-# Create a .env file in the root directory and add:
-GEMINI_API_KEY="your_api_key_here"
+# Create a .env file in the root directory and add your Gemini API Key:
+echo 'GEMINI_API_KEY="your_api_key_here"' > .env
 
 # 5. Start the Flask server
 python leaf.py
 ```
+*(Note: On first startup, the server will automatically vector-index `agricultural_knowledge.json` and generate `faiss_index.bin`)*
 
 ### Frontend Setup
 ```bash
@@ -106,44 +142,64 @@ npm install
 npm run dev
 ```
 
+---
+
 ## 6. 🌐 Usage Instructions
-1. Navigate to `http://localhost:5173` in your browser.
-2. Click **Scan Plant** to access the diagnostic portal.
-3. Upload a leaf image or use the integrated webcam tool.
-4. Review the AI prediction, confidence score, and severity indicator.
-5. Ask follow-up questions to the integrated Chat Assistant for organic pesticide recommendations.
+1. Open your browser to `http://localhost:5173`.
+2. Click **Scan Plant** to access the diagnostic dashboard.
+3. Choose your diagnostic input mode:
+   - **Image Only**: Upload a photo of the infected leaf.
+   - **Symptoms Only**: Type in the symptoms observed (e.g. "yellow spots on edges").
+   - **Hybrid (Recommended)**: Upload a photo and add a description for multimodal fusion.
+4. Review the AI prediction, severity level, auto-zoomed bounding boxes, chemical/organic treatment timelines, and references.
+5. Export the diagnostic sheet or save it to your local History Vault.
+6. Export the History Vault as a master crop report.
 
-## 7. 🧬 Model & AI Explanation
+---
 
-### Machine Learning Pipeline
-The core predictive engine is powered by **Transfer Learning** using the **ResNet50** architecture. By utilizing weights pre-trained on ImageNet, the model extracts high-level features even from extremely limited agricultural datasets.
-- **Preprocessing**: Images are scaled to `224x224` and zero-centered using ResNet's native preprocessing.
-- **Class Balancing**: Addressed dataset imbalances using Scikit-Learn's `compute_class_weight`.
-- **Top Layers**: Utilizes `GlobalAveragePooling2D` and heavy `Dropout(0.5)` to prevent catastrophic overfitting.
+## 7. 🧬 AI & Search Engine Breakdown
 
-### Generative AI Integration
-We utilize **Google's Gemini 1.5 Flash** to provide RAG-style conversational context. The model generates localized, human-readable treatment strategies instead of returning static database strings.
+### Leaf Auto-Zoom & Focus
+By applying adaptive thresholding and morphological closing, OpenCV isolates the leaf structure. The system converts the leaf pixels to HSV space to detect anomalous colors (rust, necrosis, white mildew). It extracts the bounding box coordinates, applies a 25% padding margin, crops the region, and feeds both the full image and the focused crop through the neural network pipeline, choosing the prediction that yields the highest confidence.
+
+### Vector Search (RAG)
+`rag_engine.py` embeds the structured crop-health documents in `agricultural_knowledge.json` into a FAISS index using SentenceTransformers. When a query is initiated, it fetches metadata containing:
+- Botanical / Scientific names.
+- Disease description and pathogen details.
+- Targeted organic and chemical fungicides/pesticides.
+- Recovery timelines and authoritative reference links.
+
+### Multimodal Fusion & Corrective LLM
+If both image classification and RAG symptom matching agree, the system fuses their confidence scores. If they disagree, it evaluates the channel with higher confidence. For predictions falling below the 70% threshold, it prompts Gemini 1.5 Flash with the vector-search context to formulate a definitive crop diagnosis.
+
+---
 
 ## 8. 📊 Performance Metrics
-On the evaluated test set, the upgraded ResNet50 architecture achieved:
+On the evaluated agricultural leaf test set, the upgraded ResNet50 Transfer Learning model achieved:
 - **Global Accuracy**: `~85.0%`
 - **F1-Score**: `0.85`
 - **Precision**: `0.87`
 - **Recall**: `0.85`
 
-*(Note: The model includes a safety threshold; predictions with <60% confidence are flagged as "Unrecognized Pathogen" to prevent false positives).*
+---
 
 ## 9. 📸 UI Showcase
-> *Beautiful, functional, and accessible. Designed for clarity in the field.*
+> *Beautiful, responsive, and data-rich interface designed for clarity in the field.*
 
-**Dashboard / Hero Section**
+**Dashboard Overview**
 ![Dashboard / Hero Section](demo.png)
 
-## 10. 🚀 Future Enhancements
-- [ ] **Mobile Native App**: Port the React UI to React Native for offline field capability.
-- [ ] **Expanded Dataset**: Integrate the full PlantVillage dataset (50,000+ images) for 99% accuracy.
-- [ ] **Geospatial Tracking**: Map disease outbreaks to alert neighboring farms.
-- [ ] **Weather Integration**: Correlate fungal outbreaks with local humidity and rainfall data.
+**Diagnostic Output & Auto-Zoom Crop Bounding Box**
+![Diagnostic Output Showcase](output.png)
+
+---
+
+## 10. 🚀 Future Roadmap
+- [ ] **Mobile Native Port**: Transition to React Native for offline caching and native camera capture.
+- [ ] **Outbreak Geospatial Alerts**: Map and alert neighboring agricultural zones of detected pathogens.
+- [ ] **Weather & Humidity Insights**: Integrate weather APIs to predict fungal spores spread conditions.
+
+---
 
 ## 11. 🤝 Contribution
 We welcome contributions from developers, data scientists, and agricultural experts!
@@ -153,8 +209,12 @@ We welcome contributions from developers, data scientists, and agricultural expe
 4. **Push to the branch** (`git push origin feature/AmazingFeature`).
 5. **Open a Pull Request**.
 
+---
+
 ## 12. 📄 License
 This project is licensed under the **MIT License**. See the `LICENSE` file for details.
+
+---
 
 ## 13. 👨‍💻 Author
 
